@@ -16,5 +16,5 @@ trades = run_backtest(
 
 trades.to_csv("results/ma20_stop_target.csv", index=False)
 
-summarize(trades)
+stats = summarize(trades, label="MA20 Crossover")
 plot_equity_curve(trades, title="Equity Curve — MA20 Crossover (Stop/Target)")
