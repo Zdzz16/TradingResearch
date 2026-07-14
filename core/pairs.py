@@ -22,12 +22,18 @@ default stop/target: fixed distances sized for a ~1.10 currency make no
 sense on a ~$2,000 instrument, so it uses 200/400 pips = $20/$40.
 """
 
+# spread_pips: a typical retail round-trip spread for the pair — the cost
+# of every trade, deducted by the engine. These are conservative ballpark
+# figures; tighten or widen them to match your actual broker.
 PAIRS = {
-    "EURUSD": {"ticker": "EURUSD=X", "pip_size": 0.0001, "color": "tab:blue"},
-    "GBPUSD": {"ticker": "GBPUSD=X", "pip_size": 0.0001, "color": "tab:green"},
-    "USDJPY": {"ticker": "USDJPY=X", "pip_size": 0.01,   "color": "tab:red"},
+    "EURUSD": {"ticker": "EURUSD=X", "pip_size": 0.0001, "color": "tab:blue",
+               "spread_pips": 1.0},
+    "GBPUSD": {"ticker": "GBPUSD=X", "pip_size": 0.0001, "color": "tab:green",
+               "spread_pips": 1.5},
+    "USDJPY": {"ticker": "USDJPY=X", "pip_size": 0.01,   "color": "tab:red",
+               "spread_pips": 1.0},
     "XAUUSD": {"ticker": "GC=F",     "pip_size": 0.1,    "color": "goldenrod",
-               "sl_pips": 200, "tp_pips": 400},
+               "spread_pips": 3.5, "sl_pips": 200, "tp_pips": 400},
 }
 
 # Used for any pair that doesn't override them. 100/200 pips on EURUSD
