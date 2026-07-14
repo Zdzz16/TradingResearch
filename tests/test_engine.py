@@ -112,3 +112,26 @@ def test_allow_overlap_true_permits_both():
     trades = run_backtest(data, stop_loss=0.05, take_profit=0.05, max_hold_days=3, allow_overlap=True)
 
     assert len(trades) == 2, "Both signals should produce trades when overlap is allowed"
+def test_stop_loss_fills_at_gap_open_not_theoretical_price():
+    """
+    Entry at 1.0000, stop_loss = 0.0010 -> stop level = 0.9990.
+    On day 2, the market GAPS DOWN — it opens already at 0.9950,
+    well below our stop level, before ever trading at 0.9990.
+    A realistic engine must fill at that worse Open price (0.9950),
+    NOT pretend we magically got out at our neat 0.9990 stop level.
+    """
+    dates = pd.date_range("2024-01-01", periods=5, freq="D")
+    data = pd.DataFrame({
+        "Open":  [1.0000, 1.0000, 0.9950, 1.0000, 1.0000],  # gap down on day 2
+        "High":  [1.0000, 1.0000, 0.9955, 1.0000, 1.0000],
+        "Low":   [1.0000, 1.0000, 0.9940, 1.0000, 1.0000],
+        "Close": [1.0000, 1.0000, 0.9950, 1.0000, 1.0000],
+        "NewSignal": [True, False, False, False, False],
+    }, index=dates)
+    data.index.name = "Date"
+
+    trades = run_backtest(data, stop_loss=0.0010, take_profit=None, max_hold_days=3)
+
+    assert len(trades) == 1
+    assert trades.iloc[0]["exit_reason"] == "stop_loss"
+    assert round(trades.iloc[0]["exit_price"], 4) == 0.9950  # the gap price, not 0.9990
