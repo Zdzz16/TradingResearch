@@ -8,7 +8,9 @@ def run_backtest(data, stop_loss=None, take_profit=None, max_hold_days=5):
     stop_loss: how far price can move against you before exiting, in price
                units (e.g. 0.01 = exit if price drops 100 pips). None = no stop.
     take_profit: how far price must move in your favor to exit early. None = no target.
-    max_hold_days: exit here regardless, if neither stop nor target was hit first.
+    max_hold_days: total number of days the trade can stay open, COUNTING the
+                   entry day itself as day 1. If nothing triggers by then,
+                   it force-closes at that day's Close.
 
     Returns a DataFrame — one row per trade, with entry/exit details and WHY
     each trade closed (stop_loss / take_profit / time_exit).
@@ -26,7 +28,11 @@ def run_backtest(data, stop_loss=None, take_profit=None, max_hold_days=5):
         entry_date = data.loc[entry_row, "Date"]
         exit_price, exit_date, exit_reason = None, None, None
 
-        for offset in range(1, max_hold_days + 1):
+        # offset=0 IS the entry day itself — we now check it too,
+        # instead of starting the search the day after entry.
+        # range(0, max_hold_days) means max_hold_days total days checked,
+        # matching what the parameter name actually promises.
+        for offset in range(0, max_hold_days):
             row = entry_row + offset
             if row >= len(data):
                 break
@@ -46,8 +52,9 @@ def run_backtest(data, stop_loss=None, take_profit=None, max_hold_days=5):
                 exit_reason = "take_profit"
                 break
 
+        # Neither hit — force-close at the last allowed day
         if exit_price is None:
-            row = min(entry_row + max_hold_days, len(data) - 1)
+            row = min(entry_row + max_hold_days - 1, len(data) - 1)
             exit_price = data.loc[row, "Close"]
             exit_date = data.loc[row, "Date"]
             exit_reason = "time_exit"
