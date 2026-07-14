@@ -10,15 +10,15 @@ from core.pairs import PAIRS, get_pair, pips_to_price, DEFAULT_SL_PIPS, DEFAULT_
 START, END = "2015-01-01", "2024-12-31"
 
 
-def run_strategy(pair_name, sl_pips=None, tp_pips=None, window=20, max_hold_days=10,
-                 start=START, end=END):
+def run_strategy(pair_name, sl_pips=None, tp_pips=None, spread_pips=None,
+                 window=20, max_hold_days=10, start=START, end=END):
     """
     Runs the full pipeline for ONE pair: data -> signals -> backtest -> stats.
 
-    sl_pips / tp_pips are in PIPS — they get converted to this pair's price
-    units right here, so the engine never needs to know which instrument
-    it's testing. Leave them as None to use the pair's own override from
-    core/pairs.py (gold has one), or the global defaults otherwise.
+    sl_pips / tp_pips / spread_pips are in PIPS — they get converted to this
+    pair's price units right here, so the engine never needs to know which
+    instrument it's testing. Leave them as None to use the pair's own values
+    from core/pairs.py, or the global defaults otherwise.
 
     Returns (trades, stats). This function is deliberately the one entry
     point for a single backtest — the future dashboard will call it too,
@@ -29,6 +29,8 @@ def run_strategy(pair_name, sl_pips=None, tp_pips=None, window=20, max_hold_days
         sl_pips = pair.get("sl_pips", DEFAULT_SL_PIPS)
     if tp_pips is None:
         tp_pips = pair.get("tp_pips", DEFAULT_TP_PIPS)
+    if spread_pips is None:
+        spread_pips = pair.get("spread_pips", 0)
 
     data = get_data(pair["ticker"], start, end)
     data = ma_crossover(data, window=window)
@@ -38,11 +40,15 @@ def run_strategy(pair_name, sl_pips=None, tp_pips=None, window=20, max_hold_days
         stop_loss=pips_to_price(pair_name, sl_pips),
         take_profit=pips_to_price(pair_name, tp_pips),
         max_hold_days=max_hold_days,
+        spread=pips_to_price(pair_name, spread_pips),
     )
 
     # Filename carries the pair and parameters, so runs stop overwriting
     # each other and you can always tell which settings produced a file.
-    trades.to_csv(f"results/{pair_name}_ma{window}_sl{sl_pips}_tp{tp_pips}.csv", index=False)
+    trades.to_csv(
+        f"results/{pair_name}_ma{window}_sl{sl_pips}_tp{tp_pips}_sp{spread_pips}.csv",
+        index=False,
+    )
 
     stats = summarize(trades, label=pair_name)
     return trades, stats
