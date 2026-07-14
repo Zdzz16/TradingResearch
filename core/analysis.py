@@ -37,6 +37,20 @@ def summarize(trades, label="Strategy"):
         stats["total_r"] = round(trades["r_multiple"].sum(), 2)
         stats["expectancy_r"] = round(trades["r_multiple"].mean(), 3)
 
+        # Max drawdown: the deepest peak-to-valley dip of the running
+        # equity (in R). The number that tells you how bad the worst
+        # stretch felt — total profit alone hides it. clip(lower=0)
+        # treats the starting balance as the first peak.
+        equity = trades["r_multiple"].cumsum()
+        stats["max_drawdown_r"] = round(float((equity.cummax().clip(lower=0) - equity).max()), 2)
+
+    # How many exits leaned on the engine's pessimistic same-bar
+    # assumption (stop and target both inside one bar, order unknowable).
+    # If this is a big share of all trades, get finer-grained data before
+    # trusting the numbers.
+    if "ambiguous" in trades.columns:
+        stats["ambiguous_exits"] = int(trades["ambiguous"].sum())
+
     print(f"--- {label} ---")
     print(f"Total trades: {stats['total_trades']}")
     print(f"Win rate: {stats['win_rate']}%")
@@ -45,6 +59,10 @@ def summarize(trades, label="Strategy"):
     print(f"Total profit: {stats['total_profit']}")
     if "total_r" in stats:
         print(f"Total R: {stats['total_r']} (expectancy: {stats['expectancy_r']}R per trade)")
+        print(f"Max drawdown: {stats['max_drawdown_r']}R")
+    if stats.get("ambiguous_exits"):
+        print(f"Ambiguous exits: {stats['ambiguous_exits']} "
+              "(stop+target in one bar — engine assumed the stop)")
     print("\nExit reason breakdown:")
     print(trades["exit_reason"].value_counts())
 
