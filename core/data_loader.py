@@ -18,7 +18,8 @@ def get_data(ticker, start, end):
         # much faster than hitting Yahoo again. index_col=0 tells pandas the
         # first column (Date) should be the row label, not a normal column.
         data = pd.read_csv(cache_file, index_col=0, parse_dates=True)
-        return data
+        # Drop rows with missing prices — the engine (rightly) refuses them.
+        return data.dropna(subset=["Open", "High", "Low", "Close"])
 
     # No local copy yet — download fresh, then save it for next time.
     data = yf.download(ticker, start=start, end=end, auto_adjust=True)
@@ -36,6 +37,10 @@ def get_data(ticker, start, end):
     # depending on its version — only flatten when that's actually the case.
     if isinstance(data.columns, pd.MultiIndex):
         data.columns = data.columns.droplevel(1)
+
+    # Drop rows with missing prices BEFORE caching, so the cache is clean
+    # and the engine (which rightly refuses NaN prices) never sees them.
+    data = data.dropna(subset=["Open", "High", "Low", "Close"])
 
     data.to_csv(cache_file)
     return data
