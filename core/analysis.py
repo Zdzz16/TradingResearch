@@ -30,12 +30,21 @@ def summarize(trades, label="Strategy"):
         "total_profit": round(total_profit, 5),
     }
 
+    # R-multiples measure each trade in units of risk (1R = the stop
+    # distance), which IS comparable across pairs — unlike price units,
+    # where gold's numbers would dwarf EURUSD's without meaning more.
+    if "r_multiple" in trades.columns and trades["r_multiple"].notna().any():
+        stats["total_r"] = round(trades["r_multiple"].sum(), 2)
+        stats["expectancy_r"] = round(trades["r_multiple"].mean(), 3)
+
     print(f"--- {label} ---")
     print(f"Total trades: {stats['total_trades']}")
     print(f"Win rate: {stats['win_rate']}%")
     print(f"Average win: {stats['avg_win']}")
     print(f"Average loss: {stats['avg_loss']}")
     print(f"Total profit: {stats['total_profit']}")
+    if "total_r" in stats:
+        print(f"Total R: {stats['total_r']} (expectancy: {stats['expectancy_r']}R per trade)")
     print("\nExit reason breakdown:")
     print(trades["exit_reason"].value_counts())
 
