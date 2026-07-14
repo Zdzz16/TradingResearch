@@ -135,3 +135,24 @@ def test_stop_loss_fills_at_gap_open_not_theoretical_price():
     assert len(trades) == 1
     assert trades.iloc[0]["exit_reason"] == "stop_loss"
     assert round(trades.iloc[0]["exit_price"], 4) == 0.9950  # the gap price, not 0.9990
+
+def test_r_multiple_and_return_pct_columns():
+    """
+    The stop-loss scenario risks 0.0010 and loses exactly that, so
+    r_multiple must be -1.0 ("lost 1x what I risked"). return_pct is
+    profit divided by the entry price: -0.0010 / 1.0000.
+    """
+    data = make_fake_data()
+    trades = run_backtest(data, stop_loss=0.0010, take_profit=None, max_hold_days=3)
+
+    trade = trades.iloc[0]
+    assert round(trade["r_multiple"], 6) == -1.0
+    assert round(trade["return_pct"], 6) == round(-0.0010 / 1.0000, 6)
+
+def test_r_multiple_is_empty_without_a_stop():
+    """No stop_loss means there's no 'risk unit' to measure in — the
+    r_multiple column must then be empty (NaN), not some made-up number."""
+    data = make_fake_data()
+    trades = run_backtest(data, stop_loss=None, take_profit=None, max_hold_days=3)
+
+    assert trades["r_multiple"].isna().all()

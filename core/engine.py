@@ -14,7 +14,13 @@ def run_backtest(data, stop_loss=None, take_profit=None, max_hold_days=5, allow_
                    are skipped, matching one real trading account.
 
     Returns a DataFrame — one row per trade, with entry/exit details and WHY
-    each trade closed (stop_loss / take_profit / time_exit).
+    each trade closed (stop_loss / take_profit / time_exit). Besides 'profit'
+    in raw price units, each trade also gets:
+      return_pct: profit as a fraction of the entry price
+      r_multiple: profit measured in units of risk (1R = the stop distance),
+                  e.g. -1.0 = lost exactly what was risked, +2.0 = made twice
+                  the risk. Comparable across pairs, unlike raw price units.
+                  None when no stop_loss was set (no risk unit to measure by).
     """
     data = data.reset_index()
     signal_rows = data[data["NewSignal"]].index
@@ -84,13 +90,16 @@ def run_backtest(data, stop_loss=None, take_profit=None, max_hold_days=5, allow_
 
         last_exit_row = exit_row
 
+        profit = exit_price - entry_price
         results.append({
             "entry_date": entry_date,
             "entry_price": entry_price,
             "exit_date": exit_date,
             "exit_price": exit_price,
             "exit_reason": exit_reason,
-            "profit": exit_price - entry_price
+            "profit": profit,
+            "return_pct": profit / entry_price,
+            "r_multiple": profit / stop_loss if stop_loss is not None else None
         })
 
     return pd.DataFrame(results)
