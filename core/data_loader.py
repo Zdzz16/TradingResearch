@@ -22,6 +22,20 @@ def get_data(ticker, start, end):
 
     # No local copy yet — download fresh, then save it for next time.
     data = yf.download(ticker, start=start, end=end, auto_adjust=True)
-    data.columns = data.columns.droplevel(1)
+
+    if data.empty:
+        # Fail loudly with a useful message — an empty result would otherwise
+        # sail through the whole pipeline and end in a confusing
+        # "No trades to summarize" with no hint that the data never arrived.
+        raise ValueError(
+            f"No data returned for '{ticker}' ({start} to {end}). "
+            "Check the ticker symbol (see core/pairs.py) and your connection."
+        )
+
+    # yfinance sometimes returns two-level column names (price, ticker)
+    # depending on its version — only flatten when that's actually the case.
+    if isinstance(data.columns, pd.MultiIndex):
+        data.columns = data.columns.droplevel(1)
+
     data.to_csv(cache_file)
     return data
