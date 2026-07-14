@@ -76,3 +76,39 @@ def test_stop_loss_triggers_on_entry_day():
 
     assert len(trades) == 1
     assert trades.iloc[0]["exit_reason"] == "stop_loss"
+def test_overlapping_signals_are_skipped_by_default():
+    """
+    Two signals fire close together — day 0 and day 1. The first trade
+    (entered day 1) won't close until day 3 (time exit, max_hold_days=3).
+    The second signal would enter on day 2, which is BEFORE the first
+    trade closes — so it should be skipped entirely by default.
+    """
+    dates = pd.date_range("2024-01-01", periods=6, freq="D")
+    data = pd.DataFrame({
+        "Open":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "High":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "Low":   [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "Close": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "NewSignal": [True, True, False, False, False, False],
+    }, index=dates)
+    data.index.name = "Date"
+
+    trades = run_backtest(data, stop_loss=0.05, take_profit=0.05, max_hold_days=3)
+
+    assert len(trades) == 1, "Second overlapping signal should have been skipped"
+
+def test_allow_overlap_true_permits_both():
+    """Same data, but explicitly allowing overlap should let both trades through."""
+    dates = pd.date_range("2024-01-01", periods=6, freq="D")
+    data = pd.DataFrame({
+        "Open":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "High":  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "Low":   [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "Close": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "NewSignal": [True, True, False, False, False, False],
+    }, index=dates)
+    data.index.name = "Date"
+
+    trades = run_backtest(data, stop_loss=0.05, take_profit=0.05, max_hold_days=3, allow_overlap=True)
+
+    assert len(trades) == 2, "Both signals should produce trades when overlap is allowed"
