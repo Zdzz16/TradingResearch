@@ -1,0 +1,2 @@
+timestamp,pair,direction,entry_price,stop_loss,take_profit,reason,notes,outcome
+2026-07-14 11:19,EURUSD,long,1.085,1.08,1.095,MA20 crossover + bounce off support,"First real journal entry, testing the system",open
