@@ -1,7 +1,7 @@
 import pandas as pd
 
 from core.data_loader import get_data
-from core.strategies import apply_strategy, get_strategy
+from core.strategies import apply_strategy, strategy_slug
 from core.engine import run_backtest
 from core.analysis import summarize
 from core.plotting import plot_pair_comparison
@@ -58,7 +58,7 @@ def run_strategy(pair_name, sl_pips=None, tp_pips=None, spread_pips=None,
     # parameters, so runs stop overwriting each other and you can always tell
     # which settings produced a file.
     if save_csv:
-        slug = get_strategy(strategy)["slug"](resolved)
+        slug = strategy_slug(strategy, resolved)
         trades.to_csv(
             f"results/{pair_name}_{slug}_sl{sl_pips}_tp{tp_pips}_sp{spread_pips}.csv",
             index=False,

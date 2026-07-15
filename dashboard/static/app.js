@@ -15,6 +15,7 @@ const REASON_COLORS = {
 const $ = (id) => document.getElementById(id);
 let PAIRS = [];
 let STRATEGIES = [];
+let STRATEGY_ERRORS = [];
 let lastSeries = null;
 
 /* ---------- sidebar ---------- */
@@ -71,11 +72,30 @@ $("use-defaults").addEventListener("change", (e) => {
    declares — adding a strategy in core/strategies.py is enough to make it
    appear here, with its own parameters, without touching this file. */
 async function loadStrategies() {
-  STRATEGIES = await (await fetch("/api/strategies")).json();
+  const data = await (await fetch("/api/strategies")).json();
+  STRATEGIES = data.strategies || [];
+  STRATEGY_ERRORS = data.errors || [];
+
   $("strategy").innerHTML = STRATEGIES.map(
     (s) => `<option value="${s.name}">${s.label}</option>`).join("");
   $("strategy").addEventListener("change", renderStrategyParams);
   renderStrategyParams();
+
+  // A strategy file that won't import is worth saying out loud — otherwise
+  // it just isn't in the list and you're left wondering why.
+  const box = $("strategy-errors");
+  if (STRATEGY_ERRORS.length) {
+    box.innerHTML = STRATEGY_ERRORS.map(
+      (e) => `<div><strong>${e.name}.py</strong> failed to load — ${e.error}</div>`).join("");
+    box.hidden = false;
+  } else {
+    box.hidden = true;
+  }
+
+  if (!STRATEGIES.length) {
+    $("strategy-desc").textContent = "No strategy files found in /strategies.";
+    $("run").disabled = true;
+  }
 }
 
 function currentStrategy() {

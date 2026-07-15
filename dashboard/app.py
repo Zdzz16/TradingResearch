@@ -28,7 +28,7 @@ from flask import Flask, jsonify, render_template, request
 
 from core.analysis import summarize
 from core.pairs import PAIRS, DEFAULT_SL_PIPS, DEFAULT_TP_PIPS
-from core.strategies import STRATEGIES
+from core.strategies import load_strategies, load_errors
 from run_backtest import run_strategy
 
 app = Flask(__name__)
@@ -66,18 +66,23 @@ def api_pairs():
 
 @app.route("/api/strategies")
 def api_strategies():
-    """The strategy registry — the picker and its parameter controls are
-    built from this, so adding a strategy in core/strategies.py makes it
-    appear here with no UI changes."""
-    return jsonify([
-        {
-            "name": name,
-            "label": cfg["label"],
-            "description": cfg.get("description", ""),
-            "params": cfg["params"],
-        }
-        for name, cfg in STRATEGIES.items()
-    ])
+    """Whatever is in /strategies right now — the picker and its parameter
+    controls are built from this, so dropping a file in that folder and
+    refreshing is all it takes to see it here. Files that failed to import
+    are reported rather than silently missing."""
+    strategies = load_strategies()
+    return jsonify({
+        "strategies": [
+            {
+                "name": name,
+                "label": cfg["label"],
+                "description": cfg.get("description", ""),
+                "params": cfg["params"],
+            }
+            for name, cfg in strategies.items()
+        ],
+        "errors": [{"name": n, "error": e} for n, e in load_errors.items()],
+    })
 
 
 @app.route("/api/backtest", methods=["POST"])
