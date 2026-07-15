@@ -11,7 +11,8 @@ START, END = "2015-01-01", "2024-12-31"
 
 
 def run_strategy(pair_name, sl_pips=None, tp_pips=None, spread_pips=None,
-                 window=20, max_hold_days=10, start=START, end=END):
+                 window=20, max_hold_days=10, start=START, end=END,
+                 save_csv=True):
     """
     Runs the full pipeline for ONE pair: data -> signals -> backtest -> stats.
 
@@ -20,9 +21,13 @@ def run_strategy(pair_name, sl_pips=None, tp_pips=None, spread_pips=None,
     instrument it's testing. Leave them as None to use the pair's own values
     from core/pairs.py, or the global defaults otherwise.
 
+    save_csv: write the trade list to results/. True for command-line runs
+              (that's the record of a run); the dashboard passes False, since
+              re-running on every slider tweak would bury results/ in files.
+
     Returns (trades, stats). This function is deliberately the one entry
-    point for a single backtest — the future dashboard will call it too,
-    so the dashboard and the command line can never drift apart.
+    point for a single backtest — the dashboard calls it too, so the
+    dashboard and the command line can never drift apart.
     """
     pair = get_pair(pair_name)
     if sl_pips is None:
@@ -45,10 +50,11 @@ def run_strategy(pair_name, sl_pips=None, tp_pips=None, spread_pips=None,
 
     # Filename carries the pair and parameters, so runs stop overwriting
     # each other and you can always tell which settings produced a file.
-    trades.to_csv(
-        f"results/{pair_name}_ma{window}_sl{sl_pips}_tp{tp_pips}_sp{spread_pips}.csv",
-        index=False,
-    )
+    if save_csv:
+        trades.to_csv(
+            f"results/{pair_name}_ma{window}_sl{sl_pips}_tp{tp_pips}_sp{spread_pips}.csv",
+            index=False,
+        )
 
     stats = summarize(trades, label=pair_name)
     return trades, stats

@@ -4,153 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TradingResearch</title>
-<style>
-  :root {
-    color-scheme: dark;
-    --bg: #0e1117;
-    --sidebar-bg: #16181d;
-    --border: #262a33;
-    --text: #e8eaed;
-    --text-muted: #9aa2ad;
-    --hover: rgba(255, 255, 255, 0.06);
-    --active: rgba(255, 255, 255, 0.10);
-    --accent: #4a9eff;
-    --sidebar-w: 240px;
-    --sidebar-w-collapsed: 64px;
-    --speed: 160ms;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { height: 100%; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    font-size: 14px;
-    display: flex;
-  }
-
-  /* ---------- sidebar ---------- */
-  .sidebar {
-    position: relative;
-    z-index: 2;
-    flex: 0 0 auto;
-    width: var(--sidebar-w);
-    background: var(--sidebar-bg);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    transition: width var(--speed) ease;
-  }
-  body.collapsed .sidebar { width: var(--sidebar-w-collapsed); }
-
-  .sidebar-top {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px;
-    min-height: 56px;
-  }
-
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 600;
-    font-size: 14px;
-    white-space: nowrap;
-    letter-spacing: 0.2px;
-  }
-  .brand-mark {
-    flex: 0 0 auto;
-    width: 26px; height: 26px;
-    border-radius: 7px;
-    background: linear-gradient(140deg, var(--accent), #7c5cff);
-    display: grid;
-    place-items: center;
-  }
-  .brand-mark svg { width: 15px; height: 15px; color: #fff; }
-  body.collapsed .brand { display: none; }
-
-  .toggle {
-    margin-left: auto;
-    flex: 0 0 auto;
-    width: 32px; height: 32px;
-    border: none;
-    border-radius: 8px;
-    background: none;
-    color: var(--text-muted);
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    transition: background var(--speed) ease, color var(--speed) ease;
-  }
-  .toggle:hover { background: var(--hover); color: var(--text); }
-  .toggle svg { width: 18px; height: 18px; }
-  body.collapsed .toggle { margin: 0 auto; }
-
-  /* ---------- nav ---------- */
-  .nav {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 8px;
-  }
-  .nav-bottom { margin-top: auto; padding-bottom: 12px; }
-
-  .nav-item {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 9px 10px;
-    border-radius: 8px;
-    color: var(--text-muted);
-    text-decoration: none;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: background var(--speed) ease, color var(--speed) ease;
-  }
-  .nav-item:hover { background: var(--hover); color: var(--text); }
-  .nav-item.active { background: var(--active); color: var(--text); }
-  .nav-item .icon {
-    flex: 0 0 20px;
-    width: 20px; height: 20px;
-    display: grid;
-    place-items: center;
-  }
-  .nav-item .icon svg { width: 18px; height: 18px; }
-  body.collapsed .nav-item { justify-content: center; }
-  body.collapsed .nav-item .label { display: none; }
-
-  /* tooltip — only when collapsed, since the labels are hidden then */
-  body.collapsed .nav-item::after {
-    content: attr(data-tip);
-    position: absolute;
-    left: calc(100% + 10px);
-    top: 50%;
-    transform: translateY(-50%);
-    padding: 5px 9px;
-    border-radius: 6px;
-    background: #22262e;
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-size: 12px;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 120ms ease;
-    z-index: 10;
-  }
-  body.collapsed .nav-item:hover::after { opacity: 1; }
-
-  /* ---------- main ---------- */
-  .main {
-    flex: 1;
-    min-width: 0;
-    overflow: auto;
-  }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 <script>
@@ -180,57 +34,88 @@
     </button>
   </div>
 
-  <nav class="nav">
-    <a class="nav-item active" data-tip="Backtest">
-      <span class="icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 3v18h18"/>
-          <path d="m19 9-5 5-4-4-3 3"/>
-        </svg>
-      </span>
-      <span class="label">Backtest</span>
-    </a>
+  <div class="sidebar-scroll">
+    <nav class="nav">
+      <a class="nav-item active" data-tip="Backtest" data-page="backtest">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
+          </svg>
+        </span>
+        <span class="label">Backtest</span>
+      </a>
 
-    <a class="nav-item" data-tip="Compare">
-      <span class="icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 3v18h18"/>
-          <rect x="7" y="12" width="3" height="6"/>
-          <rect x="12" y="8" width="3" height="10"/>
-          <rect x="17" y="5" width="3" height="13"/>
-        </svg>
-      </span>
-      <span class="label">Compare</span>
-    </a>
+      <a class="nav-item" data-tip="Compare" data-page="compare">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3v18h18"/>
+            <rect x="7" y="12" width="3" height="6"/>
+            <rect x="12" y="8" width="3" height="10"/>
+            <rect x="17" y="5" width="3" height="13"/>
+          </svg>
+        </span>
+        <span class="label">Compare</span>
+      </a>
 
-    <a class="nav-item" data-tip="Journal">
-      <span class="icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-        </svg>
-      </span>
-      <span class="label">Journal</span>
-    </a>
+      <a class="nav-item" data-tip="Journal" data-page="journal">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+        </span>
+        <span class="label">Journal</span>
+      </a>
+    </nav>
 
-    <a class="nav-item" data-tip="Notes">
-      <span class="icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <path d="M14 2v6h6"/>
-          <path d="M16 13H8"/><path d="M16 17H8"/>
-        </svg>
-      </span>
-      <span class="label">Notes</span>
-    </a>
-  </nav>
+    <!-- Backtest controls: only shown while the Backtest tab is active
+         and the sidebar is expanded. -->
+    <div class="controls" id="controls">
+      <div class="control-group">
+        <div class="control-title">Pairs</div>
+        <div class="pair-list" id="pair-list"></div>
+      </div>
+
+      <div class="control-group">
+        <div class="control-title">Strategy</div>
+        <label class="field">
+          <span>MA window</span>
+          <input type="number" id="window" value="20" min="2" max="200" step="1">
+        </label>
+        <label class="field">
+          <span>Max hold</span>
+          <input type="number" id="max-hold" value="10" min="1" max="60" step="1">
+        </label>
+      </div>
+
+      <div class="control-group">
+        <div class="control-title">Risk</div>
+        <label class="switch-row">
+          <span>Use pair defaults</span>
+          <input type="checkbox" id="use-defaults" checked>
+          <span class="switch"></span>
+        </label>
+        <label class="field">
+          <span>Stop loss</span>
+          <input type="number" id="sl" value="100" min="1" max="2000" step="5" disabled>
+          <em>pips</em>
+        </label>
+        <label class="field">
+          <span>Take profit</span>
+          <input type="number" id="tp" value="200" min="1" max="4000" step="5" disabled>
+          <em>pips</em>
+        </label>
+      </div>
+
+      <button class="run-btn" id="run">Run backtest</button>
+    </div>
+  </div>
 
   <nav class="nav nav-bottom">
-    <a class="nav-item" data-tip="Settings">
+    <a class="nav-item" data-tip="Settings" data-page="settings">
       <span class="icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" stroke-linejoin="round">
@@ -244,24 +129,78 @@
 </aside>
 
 <main class="main">
-  <!-- Intentionally empty — designed together, one step at a time. -->
+  <header class="page-head">
+    <h1 id="page-title">Backtest</h1>
+    <p class="sub" id="page-sub">MA-crossover across FX &amp; gold, net of spread.</p>
+  </header>
+
+  <!-- nothing run yet -->
+  <div class="state" id="empty">
+    <div class="state-inner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
+      </svg>
+      <p>Pick your pairs and settings on the left, then <strong>Run backtest</strong>.</p>
+    </div>
+  </div>
+
+  <div class="state" id="loading" hidden>
+    <div class="state-inner"><div class="spinner"></div><p>Running…</p></div>
+  </div>
+
+  <div class="state error" id="error" hidden>
+    <div class="state-inner"><p id="error-msg"></p></div>
+  </div>
+
+  <div id="results" hidden>
+    <!-- three stat cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-label">Win rate</div>
+        <div class="card-value" id="c-winrate">—</div>
+        <div class="card-note" id="c-winrate-note"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">Expectancy</div>
+        <div class="card-value" id="c-expectancy">—</div>
+        <div class="card-note">average R per trade</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Max drawdown</div>
+        <div class="card-value" id="c-drawdown">—</div>
+        <div class="card-note">deepest dip from a peak</div>
+      </div>
+    </div>
+
+    <!-- equity curve -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Equity curve</h2>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="chart-wrap" id="equity-wrap"></div>
+    </section>
+
+    <!-- trades (left) + exit reasons (right) -->
+    <div class="two-col">
+      <section class="panel">
+        <div class="trades-head">
+          <span>Total trades</span>
+          <strong id="t-total">0</strong>
+        </div>
+        <div class="trades-scroll" id="trades-scroll"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>How trades ended</h2></div>
+        <div class="exit-chart" id="exit-chart"></div>
+        <div class="mini-stats" id="mini-stats"></div>
+      </section>
+    </div>
+  </div>
 </main>
 
-<script>
-  const toggle = document.getElementById("toggle");
-  toggle.addEventListener("click", () => {
-    const collapsed = document.body.classList.toggle("collapsed");
-    localStorage.setItem("sidebar-collapsed", collapsed ? "1" : "0");
-  });
-
-  // Nav items don't lead anywhere yet — for now clicking just moves the
-  // highlight, so the menu behaves like a menu.
-  document.querySelectorAll(".nav-item").forEach((item) => {
-    item.addEventListener("click", () => {
-      document.querySelectorAll(".nav-item").forEach((i) => i.classList.remove("active"));
-      item.classList.add("active");
-    });
-  });
-</script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>
