@@ -76,6 +76,14 @@ purely waiting on decisions #3 and #4 above.
 
 ## 4. Owed work / known-unverified
 
+- **Only one strategy exists.** The discovery system is proven (verified
+  in-browser: a second file dropped into `/strategies` appeared without a
+  restart, brought its own parameters, and produced different results), but
+  the engine's per-signal powers — `Direction` (shorts), `StopDistance`,
+  `TargetDistance`, `EntryLimit`, `ExitSignal` — are **used by no strategy**.
+  A second real strategy would turn that capability from theoretical into
+  exercised, and give the Compare tab a reason to exist. Not done because it's
+  trading logic, and which strategy to write is your call, not mine.
 - **The exit panel resize was never visually checked.** A tooling outage
   blocked every browser action but screenshots the day it shipped. The CSS
   was verified served and the flex maths re-derived, but it owes one look.
