@@ -276,6 +276,7 @@ body:not(.page-backtest) .controls { display: none; }
   border-radius: 12px; padding: 16px 18px; margin-bottom: 18px;
 }
 .panel-head {
+  flex: 0 0 auto;
   display: flex; align-items: center; justify-content: space-between;
   gap: 16px; margin-bottom: 14px;
 }
@@ -337,23 +338,35 @@ body:not(.page-backtest) .controls { display: none; }
 }
 .trade-r { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
 
-/* exit reason chart */
-.exit-chart { flex: 0 0 auto; display: flex; flex-direction: column; gap: 10px; }
-.exit-row { display: grid; grid-template-columns: 92px 1fr 34px; align-items: center; gap: 10px; }
-.exit-name { font-size: 12px; color: var(--text-muted); }
-.exit-bar-bg { background: rgba(255, 255, 255, 0.04); border-radius: 4px; height: 8px; }
-.exit-bar { height: 8px; border-radius: 4px; transition: width 300ms ease; }
+/* exit reason chart — the panel splits in half: bars take the top half,
+   stats the bottom half, so neither leaves a field of blank space */
+.exit-chart {
+  flex: 1 1 0; min-height: 0;
+  display: flex; flex-direction: column;
+  justify-content: space-evenly; gap: 8px;
+}
+.exit-row { display: grid; grid-template-columns: 86px 1fr 42px; align-items: center; gap: 12px; }
+.exit-name { font-size: 13px; color: var(--text-muted); }
+.exit-bar-bg { background: rgba(255, 255, 255, 0.04); border-radius: 5px; height: 16px; }
+.exit-bar { height: 16px; border-radius: 5px; transition: width 300ms ease; }
 .exit-count {
-  font-size: 12px; text-align: right; color: var(--text-muted);
+  font-size: 13px; font-weight: 600; text-align: right; color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
-/* margin-top:auto pins these to the foot of the panel, so a tall column
-   fills instead of trailing off into empty space */
+/* the other half: fewer, bigger numbers rather than a cramped footnote */
 .mini-stats {
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 16px;
-  margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border);
+  flex: 1 1 0; min-height: 0;
+  display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+  gap: 8px 16px;
+  margin-top: 0; padding-top: 16px; border-top: 1px solid var(--border);
 }
-.mini-stat { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.mini-stat span { font-size: 12px; color: var(--text-dim); }
-.mini-stat strong { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.mini-stat { display: flex; flex-direction: column; justify-content: center; gap: 3px; }
+.mini-stat span {
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--text-dim);
+}
+.mini-stat strong {
+  font-size: 19px; font-weight: 650; letter-spacing: -0.3px;
+  font-variant-numeric: tabular-nums;
+}
