@@ -204,3 +204,42 @@ def test_journal_endpoints_answer(client, tmp_path, monkeypatch):
     assert round(live[0]["r_multiple"], 6) == 1.0   # R comes back for free
     assert client.get("/api/journal/live?open=1").get_json() == []
     assert client.get("/api/journal/runs").status_code == 200
+
+
+# ---------- the cache must serve any window it already covers ----------
+
+def test_a_sub_range_is_served_from_the_wide_cache_without_network(monkeypatch):
+    """Caching by exact ticker+start+end meant every new window was a fresh
+    download — so an in-sample/out-of-sample split would hit the network
+    twice and leave two more cache files, despite the answer already sitting
+    in the 2015-2024 file. Any download here is a failure."""
+    import yfinance
+    from core.data_loader import CACHE_DIR, get_data
+
+    def boom(*a, **k):
+        raise AssertionError("went to the network for data we already hold")
+    monkeypatch.setattr(yfinance, "download", boom)
+
+    before = set(CACHE_DIR.glob("*.csv"))
+    ins = get_data("EURUSD=X", "2015-01-01", "2020-01-01")
+    oos = get_data("EURUSD=X", "2021-01-01", "2024-12-31")
+
+    assert len(ins) and len(oos)
+    assert ins.index[-1] < oos.index[0]          # the split doesn't overlap
+    assert str(ins.index[-1].date()) <= "2020-01-01"
+    assert str(oos.index[0].date()) >= "2021-01-01"
+    assert set(CACHE_DIR.glob("*.csv")) == before  # and nothing new was written
+
+
+def test_an_uncovered_window_is_not_faked_from_a_narrower_cache(monkeypatch):
+    """Only a cache that CONTAINS the window may answer it. Asking for
+    2010 must not be quietly served the 2015-2024 file."""
+    import yfinance
+    from core import data_loader
+
+    calls = []
+    monkeypatch.setattr(yfinance, "download",
+                        lambda *a, **k: calls.append(k) or __import__("pandas").DataFrame())
+    with pytest.raises(ValueError, match="No data returned"):
+        data_loader.get_data("EURUSD=X", "2010-01-01", "2012-01-01")
+    assert calls, "should have tried to download a window we don't hold"
