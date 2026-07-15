@@ -1,5 +1,26 @@
 # Notes
 
+## 2026-07-15 — Compare tab: one saved result per strategy
+
+Idea: each backtest run gets saved so the Compare tab can put strategies side
+by side. **One slot per strategy** — running the same strategy again replaces
+(deletes) its previous saved result, so a strategy can never show up twice in
+the comparison.
+
+**Open question before building this.** Keying by strategy *name* means MA
+crossover @ window 20 and @ window 50 overwrite each other — so you could
+never compare a strategy against a different tuning of itself, which is one
+of the more useful comparisons (and the cheap way to spot an overfitted
+parameter: a real edge degrades gently across neighbouring settings, a fluke
+collapses). Keying by strategy **+ params** keeps both, and the no-duplicates
+rule still holds: re-running the exact same strategy+params replaces its own
+slot. Same rule, finer key. Decide before building.
+
+Where it lives: a run is ~15 ms and fully deterministic, so this is a
+convenience cache, not a source of truth — an in-memory dict on the server,
+or the browser's localStorage. Nothing needs to hit disk, and it can be
+thrown away at any time without losing anything.
+
 ## 2026-07-15 — Live trade tracker (the "Tracker" page)
 
 Once real money is trading: pull our actual filled trades from the broker's

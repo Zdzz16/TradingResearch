@@ -137,9 +137,10 @@
 <main class="main">
   <header class="page-head">
     <h1 id="page-title">Backtest</h1>
-    <p class="sub" id="page-sub">MA-crossover across FX &amp; gold, net of spread.</p>
+    <p class="sub" id="page-sub">Test strategies against historical price data.</p>
   </header>
 
+  <div class="page" id="page-backtest">
   <!-- nothing run yet -->
   <div class="state" id="empty">
     <div class="state-inner">
@@ -203,6 +204,14 @@
         <div class="exit-chart" id="exit-chart"></div>
         <div class="mini-stats" id="mini-stats"></div>
       </section>
+    </div>
+  </div>
+  </div>
+
+  <!-- every other tab, until it has something on it -->
+  <div class="page state" id="page-blank" hidden>
+    <div class="state-inner">
+      <p id="blank-label"></p>
     </div>
   </div>
 </main>

@@ -32,19 +32,32 @@ document.querySelectorAll(".nav-item").forEach((item) => {
   });
 });
 
+const PAGE_META = {
+  backtest: ["Backtest", "Test strategies against historical price data."],
+  compare: ["Compare", "Strategies side by side."],
+  tracker: ["Tracker", "Your live trades, measured like the backtest."],
+  settings: ["Settings", "Preferences and defaults."],
+};
+
 // The controls panel belongs to the Backtest tab, so the body carries the
-// current page and the CSS decides what shows.
+// current page and the CSS decides what shows. Every other tab is a blank
+// page with its name on it until we build it.
 function setPage(page) {
-  document.body.classList.toggle("page-backtest", page === "backtest");
-  const titles = {
-    backtest: ["Backtest", "Historical simulation across FX & gold, net of spread."],
-    compare: ["Compare", "Coming next — pairs side by side."],
-    tracker: ["Tracker", "Coming next — your live trades, same analytics as the backtest."],
-    settings: ["Settings", "Coming next."],
-  };
-  const [title, sub] = titles[page] || titles.backtest;
+  const isBacktest = page === "backtest";
+  document.body.classList.toggle("page-backtest", isBacktest);
+  $("page-backtest").hidden = !isBacktest;
+  $("page-blank").hidden = isBacktest;
+
+  const [title, sub] = PAGE_META[page] || PAGE_META.backtest;
   $("page-title").textContent = title;
   $("page-sub").textContent = sub;
+
+  if (isBacktest) {
+    // the chart couldn't measure itself while the page was hidden
+    if (lastSeries) renderEquity(lastSeries);
+  } else {
+    $("blank-label").textContent = `${title} — nothing here yet.`;
+  }
 }
 setPage("backtest");
 
