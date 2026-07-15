@@ -25,15 +25,25 @@ sense on a ~$2,000 instrument, so it uses 200/400 pips = $20/$40.
 # spread_pips: a typical retail round-trip spread for the pair — the cost
 # of every trade, deducted by the engine. These are conservative ballpark
 # figures; tighten or widen them to match your actual broker.
+#
+# base / quote: which currency each side of the price is in. EURUSD means
+# "how many USD for one EUR" — base EUR, quote USD. This is what the account
+# simulator needs to turn a price move into money:
+#   * profit lands in the QUOTE currency (a EURUSD move pays USD; a USDJPY
+#     move pays JPY and has to be converted).
+#   * what you're borrowing to hold is measured in the BASE currency, so the
+#     position's value in USD depends on whether the base already IS USD.
+# XAU is gold: "base" is an ounce, priced in USD.
 PAIRS = {
     "EURUSD": {"ticker": "EURUSD=X", "pip_size": 0.0001, "color": "tab:blue",
-               "spread_pips": 1.0},
+               "spread_pips": 1.0, "base": "EUR", "quote": "USD"},
     "GBPUSD": {"ticker": "GBPUSD=X", "pip_size": 0.0001, "color": "tab:green",
-               "spread_pips": 1.5},
+               "spread_pips": 1.5, "base": "GBP", "quote": "USD"},
     "USDJPY": {"ticker": "USDJPY=X", "pip_size": 0.01,   "color": "tab:red",
-               "spread_pips": 1.0},
+               "spread_pips": 1.0, "base": "USD", "quote": "JPY"},
     "XAUUSD": {"ticker": "GC=F",     "pip_size": 0.1,    "color": "goldenrod",
-               "spread_pips": 3.5, "sl_pips": 200, "tp_pips": 400},
+               "spread_pips": 3.5, "sl_pips": 200, "tp_pips": 400,
+               "base": "XAU", "quote": "USD"},
 }
 
 # Used for any pair that doesn't override them. 100/200 pips on EURUSD
