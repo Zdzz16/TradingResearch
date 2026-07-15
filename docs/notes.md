@@ -1,5 +1,29 @@
 # Notes
 
+## 2026-07-15 — Live trade tracker (the "Tracker" page)
+
+Once real money is trading: pull our actual filled trades from the broker's
+API and show them with **the same analytics the backtest produces** — win
+rate, expectancy in R, max drawdown, exit reasons, equity curve. The point
+is a like-for-like comparison: does live match what the backtest promised?
+That's the loop that catches broken assumptions before they get expensive
+(slippage worse than modelled, spreads wider than the registry's estimate,
+signals that fire differently in real time).
+
+Design notes:
+- The nav's **Tracker** page is this. `core/journal.py` (manual entries with
+  your reasoning) becomes one input; the broker API becomes the other. A
+  trade's *reasoning* still has to be typed by a human — the API only knows
+  prices and times.
+- To reuse `summarize()` and the dashboard's charts unchanged, live trades
+  must land in the same shape as the engine's output: entry/exit date+price,
+  exit_reason, profit, r_multiple, direction. `r_multiple` needs the stop
+  distance we intended, so log it at entry time — the broker won't tell us.
+- Broker undecided. OANDA is the obvious candidate (good REST API, free
+  practice account, and we may use their data for bid/ask anyway — see the
+  data note below), but not committed. Discuss brokers before building.
+- Naturally pairs with the data upgrade below: same account, same API.
+
 ## 2026-07-15 — Data upgrade: Dukascopy (Swiss bank, free)
 
 When we outgrow Yahoo, the upgrade path is (in order):

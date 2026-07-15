@@ -59,15 +59,14 @@
         <span class="label">Compare</span>
       </a>
 
-      <a class="nav-item" data-tip="Journal" data-page="journal">
+      <a class="nav-item" data-tip="Tracker" data-page="tracker">
         <span class="icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
           </svg>
         </span>
-        <span class="label">Journal</span>
+        <span class="label">Tracker</span>
       </a>
     </nav>
 
@@ -81,14 +80,16 @@
 
       <div class="control-group">
         <div class="control-title">Strategy</div>
-        <label class="field">
-          <span>MA window</span>
-          <input type="number" id="window" value="20" min="2" max="200" step="1">
-        </label>
-        <label class="field">
-          <span>Max hold</span>
-          <input type="number" id="max-hold" value="10" min="1" max="60" step="1">
-        </label>
+        <div class="select-wrap">
+          <select id="strategy"></select>
+          <svg class="select-chevrons" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/>
+          </svg>
+        </div>
+        <p class="select-desc" id="strategy-desc"></p>
+        <!-- the chosen strategy's own knobs, built from its declaration -->
+        <div id="strategy-params"></div>
       </div>
 
       <div class="control-group">
@@ -107,6 +108,11 @@
           <span>Take profit</span>
           <input type="number" id="tp" value="200" min="1" max="4000" step="5" disabled>
           <em>pips</em>
+        </label>
+        <label class="field">
+          <span>Max hold</span>
+          <input type="number" id="max-hold" value="10" min="1" max="60" step="1">
+          <em>days</em>
         </label>
       </div>
 

@@ -1,7 +1,7 @@
 import pandas as pd
 
 from core.data_loader import get_data
-from core.strategies import ma_crossover
+from core.strategies import apply_strategy, get_strategy
 from core.engine import run_backtest
 from core.analysis import summarize
 from core.plotting import plot_pair_comparison
@@ -11,10 +11,16 @@ START, END = "2015-01-01", "2024-12-31"
 
 
 def run_strategy(pair_name, sl_pips=None, tp_pips=None, spread_pips=None,
-                 window=20, max_hold_days=10, start=START, end=END,
-                 save_csv=True):
+                 strategy="ma_crossover", params=None, max_hold_days=10,
+                 start=START, end=END, save_csv=True):
     """
     Runs the full pipeline for ONE pair: data -> signals -> backtest -> stats.
+
+    strategy: which entry in core/strategies.py STRATEGIES to run.
+    params:   that strategy's own knobs, e.g. {"window": 20}. Anything left
+              out falls back to the strategy's declared default. Stop, target
+              and hold time are NOT strategy params — they belong to the
+              engine and are separate arguments here.
 
     sl_pips / tp_pips / spread_pips are in PIPS — they get converted to this
     pair's price units right here, so the engine never needs to know which
@@ -38,7 +44,7 @@ def run_strategy(pair_name, sl_pips=None, tp_pips=None, spread_pips=None,
         spread_pips = pair.get("spread_pips", 0)
 
     data = get_data(pair["ticker"], start, end)
-    data = ma_crossover(data, window=window)
+    data, resolved = apply_strategy(data, strategy, params)
 
     trades = run_backtest(
         data,
@@ -48,11 +54,13 @@ def run_strategy(pair_name, sl_pips=None, tp_pips=None, spread_pips=None,
         spread=pips_to_price(pair_name, spread_pips),
     )
 
-    # Filename carries the pair and parameters, so runs stop overwriting
-    # each other and you can always tell which settings produced a file.
+    # Filename carries the pair, the strategy's own short name and the
+    # parameters, so runs stop overwriting each other and you can always tell
+    # which settings produced a file.
     if save_csv:
+        slug = get_strategy(strategy)["slug"](resolved)
         trades.to_csv(
-            f"results/{pair_name}_ma{window}_sl{sl_pips}_tp{tp_pips}_sp{spread_pips}.csv",
+            f"results/{pair_name}_{slug}_sl{sl_pips}_tp{tp_pips}_sp{spread_pips}.csv",
             index=False,
         )
 

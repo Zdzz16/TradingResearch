@@ -28,6 +28,7 @@ from flask import Flask, jsonify, render_template, request
 
 from core.analysis import summarize
 from core.pairs import PAIRS, DEFAULT_SL_PIPS, DEFAULT_TP_PIPS
+from core.strategies import STRATEGIES
 from run_backtest import run_strategy
 
 app = Flask(__name__)
@@ -63,6 +64,22 @@ def api_pairs():
     ])
 
 
+@app.route("/api/strategies")
+def api_strategies():
+    """The strategy registry — the picker and its parameter controls are
+    built from this, so adding a strategy in core/strategies.py makes it
+    appear here with no UI changes."""
+    return jsonify([
+        {
+            "name": name,
+            "label": cfg["label"],
+            "description": cfg.get("description", ""),
+            "params": cfg["params"],
+        }
+        for name, cfg in STRATEGIES.items()
+    ])
+
+
 @app.route("/api/backtest", methods=["POST"])
 def api_backtest():
     """Runs the backtest for the selected pairs and returns everything the
@@ -73,7 +90,8 @@ def api_backtest():
     if not names:
         return jsonify({"error": "Pick at least one pair."}), 400
 
-    window = int(req.get("window", 20))
+    strategy = req.get("strategy", "ma_crossover")
+    params = req.get("params") or {}
     max_hold = int(req.get("max_hold_days", 10))
     # None = let each pair use its own defaults from the registry.
     sl_pips = req.get("sl_pips")
@@ -84,7 +102,8 @@ def api_backtest():
         try:
             trades, _ = run_strategy(
                 name, sl_pips=sl_pips, tp_pips=tp_pips,
-                window=window, max_hold_days=max_hold, save_csv=False,
+                strategy=strategy, params=params,
+                max_hold_days=max_hold, save_csv=False,
             )
         except Exception as exc:  # bad ticker, no data, bad params
             return jsonify({"error": f"{name}: {exc}"}), 400
@@ -108,6 +127,24 @@ def api_backtest():
     pooled = pd.concat(frames).sort_values("entry_date").reset_index(drop=True)
     combined = summarize(pooled, label="Combined")
     combined["exit_reasons"] = pooled["exit_reason"].value_counts().to_dict()
+
+    # Average win/loss in R, not price units: pooling price-unit profit across
+    # pairs would average gold's dollars with EURUSD's pips and mean nothing.
+    wins = pooled.loc[pooled["profit"] > 0, "r_multiple"]
+    losses = pooled.loc[pooled["profit"] <= 0, "r_multiple"]
+    avg_win_r = float(wins.mean()) if len(wins) else 0.0
+    avg_loss_r = float(losses.mean()) if len(losses) else 0.0  # negative
+    combined["avg_win_r"] = round(avg_win_r, 3)
+    combined["avg_loss_r"] = round(avg_loss_r, 3)
+
+    # The win rate this strategy must beat just to break even, given how big
+    # its wins and losses actually turned out. THIS is what makes a win rate
+    # good or bad — not a fixed number. Win 39% with 2:1 winners and you make
+    # money; win 55% with 1:2 winners and you don't.
+    spread_r = avg_win_r + abs(avg_loss_r)
+    combined["breakeven_win_rate"] = (
+        round(abs(avg_loss_r) / spread_r * 100, 1) if spread_r else None
+    )
 
     table = pooled[[c for c in TRADE_COLUMNS if c in pooled.columns] + ["pair"]].copy()
     for col in ("entry_date", "exit_date"):

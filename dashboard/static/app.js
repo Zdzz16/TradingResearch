@@ -14,6 +14,7 @@ const REASON_COLORS = {
 
 const $ = (id) => document.getElementById(id);
 let PAIRS = [];
+let STRATEGIES = [];
 let lastSeries = null;
 
 /* ---------- sidebar ---------- */
@@ -36,9 +37,9 @@ document.querySelectorAll(".nav-item").forEach((item) => {
 function setPage(page) {
   document.body.classList.toggle("page-backtest", page === "backtest");
   const titles = {
-    backtest: ["Backtest", "MA-crossover across FX & gold, net of spread."],
+    backtest: ["Backtest", "Historical simulation across FX & gold, net of spread."],
     compare: ["Compare", "Coming next — pairs side by side."],
-    journal: ["Journal", "Coming next — your real trades."],
+    tracker: ["Tracker", "Coming next — your live trades, same analytics as the backtest."],
     settings: ["Settings", "Coming next."],
   };
   const [title, sub] = titles[page] || titles.backtest;
@@ -52,6 +53,37 @@ $("use-defaults").addEventListener("change", (e) => {
   $("sl").disabled = e.target.checked;
   $("tp").disabled = e.target.checked;
 });
+
+/* The strategy picker and its knobs are built from what the backend
+   declares — adding a strategy in core/strategies.py is enough to make it
+   appear here, with its own parameters, without touching this file. */
+async function loadStrategies() {
+  STRATEGIES = await (await fetch("/api/strategies")).json();
+  $("strategy").innerHTML = STRATEGIES.map(
+    (s) => `<option value="${s.name}">${s.label}</option>`).join("");
+  $("strategy").addEventListener("change", renderStrategyParams);
+  renderStrategyParams();
+}
+
+function currentStrategy() {
+  return STRATEGIES.find((s) => s.name === $("strategy").value) || STRATEGIES[0];
+}
+
+function renderStrategyParams() {
+  const s = currentStrategy();
+  if (!s) return;
+  $("strategy-desc").textContent = s.description || "";
+  $("strategy-params").innerHTML = s.params.map((p) => `
+    <label class="field">
+      <span>${p.label}</span>
+      <input type="number" class="sparam" data-name="${p.name}"
+             value="${p.default}" min="${p.min ?? ""}" max="${p.max ?? ""}"
+             step="${p.step ?? 1}">
+    </label>`).join("");
+}
+
+const strategyParams = () => Object.fromEntries(
+  [...document.querySelectorAll(".sparam")].map((el) => [el.dataset.name, Number(el.value)]));
 
 async function loadPairs() {
   PAIRS = await (await fetch("/api/pairs")).json();
@@ -89,7 +121,8 @@ async function run() {
   const useDefaults = $("use-defaults").checked;
   const body = {
     pairs,
-    window: Number($("window").value),
+    strategy: $("strategy").value,
+    params: strategyParams(),
     max_hold_days: Number($("max-hold").value),
     sl_pips: useDefaults ? null : Number($("sl").value),
     tp_pips: useDefaults ? null : Number($("tp").value),
@@ -125,20 +158,33 @@ function show(which) {
 function render(data) {
   const c = data.combined;
 
-  // Win rate, coloured by the thresholds we agreed: <40 red, 40-60 amber, >60 green.
+  // A win rate is only good or bad relative to the win rate this strategy
+  // needs to break even — which depends on how big its wins are versus its
+  // losses. So we colour it against that, and show the bar it has to clear.
   const wr = c.win_rate ?? 0;
+  const be = c.breakeven_win_rate;
   const wrEl = $("c-winrate");
   wrEl.textContent = `${wr.toFixed(1)}%`;
-  wrEl.className = "card-value " + (wr < 40 ? "v-bad" : wr <= 60 ? "v-warn" : "v-good");
-  $("c-winrate-note").textContent = `${c.total_trades} trades`;
+  if (be == null) {
+    wrEl.className = "card-value";
+    $("c-winrate-note").textContent = "";
+  } else {
+    const edge = wr - be;
+    wrEl.className = "card-value " +
+      (edge > 0.5 ? "v-good" : edge < -0.5 ? "v-bad" : "v-warn");
+    $("c-winrate-note").textContent = `needs ${be.toFixed(1)}% to break even`;
+  }
 
-  // Expectancy: green when it makes money, red when it loses. Unlike win
-  // rate, this one can't lie about whether there's an edge.
+  // Expectancy: green when it makes money, red when it loses. This and the
+  // win-rate colour are two views of the same truth, so they always agree.
   const exp = c.expectancy_r ?? 0;
   const expEl = $("c-expectancy");
   expEl.textContent = `${exp > 0 ? "+" : ""}${exp.toFixed(3)} R`;
-  expEl.className = "card-value " + (exp > 0 ? "v-good" : "v-bad");
+  expEl.className = "card-value " +
+    (exp > 0.005 ? "v-good" : exp < -0.005 ? "v-bad" : "v-warn");
 
+  // Drawdown gets no colour: every strategy has one, and there's no honest
+  // threshold that says which number is "bad" — it's context, not a verdict.
   $("c-drawdown").textContent = `${(c.max_drawdown_r ?? 0).toFixed(2)} R`;
 
   lastSeries = data.series;
@@ -250,11 +296,13 @@ function renderExit(reasons) {
 }
 
 // Only what earns its place — the rest of the stats stay out of the way.
+// Wins/losses are in R, not price units: averaging gold's dollars with
+// EURUSD's pips would produce a number that means nothing.
 function renderMini(c) {
   const rows = [
     ["Total R", `${c.total_r > 0 ? "+" : ""}${(c.total_r ?? 0).toFixed(2)}`],
-    ["Avg win", (c.avg_win ?? 0).toFixed(5)],
-    ["Avg loss", (c.avg_loss ?? 0).toFixed(5)],
+    ["Avg win", `+${(c.avg_win_r ?? 0).toFixed(2)}R`],
+    ["Avg loss", `${(c.avg_loss_r ?? 0).toFixed(2)}R`],
     ["Ambiguous", c.ambiguous_exits ?? 0],
   ];
   $("mini-stats").innerHTML = rows.map(([k, v]) => `
@@ -268,4 +316,5 @@ window.addEventListener("resize", () => {
   resizeTimer = setTimeout(() => { if (lastSeries) renderEquity(lastSeries); }, 120);
 });
 
+loadStrategies();
 loadPairs();
