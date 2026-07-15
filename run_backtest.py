@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas as pd
 
 from core.data_loader import get_data
@@ -8,6 +10,10 @@ from core.plotting import plot_pair_comparison
 from core.pairs import PAIRS, get_pair, pips_to_price, DEFAULT_SL_PIPS, DEFAULT_TP_PIPS
 
 START, END = "2015-01-01", "2024-12-31"
+
+# Anchored to the project root, not the working directory — a CLI run from
+# another folder used to scatter results wherever it was launched from.
+RESULTS_DIR = Path(__file__).resolve().parent / "results"
 
 
 def run_strategy(pair_name, sl_pips=None, tp_pips=None, spread_pips=None,
@@ -60,8 +66,9 @@ def run_strategy(pair_name, sl_pips=None, tp_pips=None, spread_pips=None,
     # which settings produced a file.
     if save_csv:
         slug = strategy_slug(strategy, resolved)
+        RESULTS_DIR.mkdir(parents=True, exist_ok=True)
         trades.to_csv(
-            f"results/{pair_name}_{slug}_sl{sl_pips}_tp{tp_pips}_sp{spread_pips}.csv",
+            RESULTS_DIR / f"{pair_name}_{slug}_sl{sl_pips}_tp{tp_pips}_sp{spread_pips}.csv",
             index=False,
         )
 
