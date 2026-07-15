@@ -26,6 +26,9 @@ sense on a ~$2,000 instrument, so it uses 200/400 pips = $20/$40.
 # of every trade, deducted by the engine. These are conservative ballpark
 # figures; tighten or widen them to match your actual broker.
 #
+# color: hex, so every chart (CLI matplotlib AND the web dashboard) uses it
+# directly — the web server doesn't need matplotlib just to read a colour.
+#
 # base / quote: which currency each side of the price is in. EURUSD means
 # "how many USD for one EUR" — base EUR, quote USD. This is what the account
 # simulator needs to turn a price move into money:
@@ -35,13 +38,13 @@ sense on a ~$2,000 instrument, so it uses 200/400 pips = $20/$40.
 #     position's value in USD depends on whether the base already IS USD.
 # XAU is gold: "base" is an ounce, priced in USD.
 PAIRS = {
-    "EURUSD": {"ticker": "EURUSD=X", "pip_size": 0.0001, "color": "tab:blue",
+    "EURUSD": {"ticker": "EURUSD=X", "pip_size": 0.0001, "color": "#1f77b4",
                "spread_pips": 1.0, "base": "EUR", "quote": "USD"},
-    "GBPUSD": {"ticker": "GBPUSD=X", "pip_size": 0.0001, "color": "tab:green",
+    "GBPUSD": {"ticker": "GBPUSD=X", "pip_size": 0.0001, "color": "#2ca02c",
                "spread_pips": 1.5, "base": "GBP", "quote": "USD"},
-    "USDJPY": {"ticker": "USDJPY=X", "pip_size": 0.01,   "color": "tab:red",
+    "USDJPY": {"ticker": "USDJPY=X", "pip_size": 0.01,   "color": "#d62728",
                "spread_pips": 1.0, "base": "USD", "quote": "JPY"},
-    "XAUUSD": {"ticker": "GC=F",     "pip_size": 0.1,    "color": "goldenrod",
+    "XAUUSD": {"ticker": "GC=F",     "pip_size": 0.1,    "color": "#daa520",
                "spread_pips": 3.5, "sl_pips": 200, "tp_pips": 400,
                "base": "XAU", "quote": "USD"},
 }

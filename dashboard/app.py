@@ -22,7 +22,6 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 os.chdir(ROOT)
 
-import matplotlib.colors as mcolors
 import pandas as pd
 from flask import Flask, jsonify, render_template, request
 
@@ -56,7 +55,7 @@ def api_pairs():
     return jsonify([
         {
             "name": name,
-            "color": mcolors.to_hex(cfg["color"]),
+            "color": cfg["color"],
             "sl_pips": cfg.get("sl_pips", DEFAULT_SL_PIPS),
             "tp_pips": cfg.get("tp_pips", DEFAULT_TP_PIPS),
         }
@@ -116,7 +115,7 @@ def api_backtest():
         equity = trades["r_multiple"].cumsum().tolist() if len(trades) else []
         series.append({
             "pair": name,
-            "color": mcolors.to_hex(PAIRS[name]["color"]),
+            "color": PAIRS[name]["color"],
             "points": equity,
         })
         if len(trades):
@@ -129,27 +128,13 @@ def api_backtest():
 
     # Pool every selected pair's trades in date order: that's the portfolio
     # view — what an account trading all of them at once would have seen.
+    # Pool every selected pair's trades in date order: the portfolio view.
+    # All the maths (avg win/loss in R, break-even win rate, drawdown) lives
+    # in core/analysis.py so the CLI and the dashboard report identical
+    # numbers; quiet, or every API call would spam the server console.
     pooled = pd.concat(frames).sort_values("entry_date").reset_index(drop=True)
-    combined = summarize(pooled, label="Combined")
+    combined = summarize(pooled, label="Combined", verbose=False)
     combined["exit_reasons"] = pooled["exit_reason"].value_counts().to_dict()
-
-    # Average win/loss in R, not price units: pooling price-unit profit across
-    # pairs would average gold's dollars with EURUSD's pips and mean nothing.
-    wins = pooled.loc[pooled["profit"] > 0, "r_multiple"]
-    losses = pooled.loc[pooled["profit"] <= 0, "r_multiple"]
-    avg_win_r = float(wins.mean()) if len(wins) else 0.0
-    avg_loss_r = float(losses.mean()) if len(losses) else 0.0  # negative
-    combined["avg_win_r"] = round(avg_win_r, 3)
-    combined["avg_loss_r"] = round(avg_loss_r, 3)
-
-    # The win rate this strategy must beat just to break even, given how big
-    # its wins and losses actually turned out. THIS is what makes a win rate
-    # good or bad — not a fixed number. Win 39% with 2:1 winners and you make
-    # money; win 55% with 1:2 winners and you don't.
-    spread_r = avg_win_r + abs(avg_loss_r)
-    combined["breakeven_win_rate"] = (
-        round(abs(avg_loss_r) / spread_r * 100, 1) if spread_r else None
-    )
 
     table = pooled[[c for c in TRADE_COLUMNS if c in pooled.columns] + ["pair"]].copy()
     for col in ("entry_date", "exit_date"):

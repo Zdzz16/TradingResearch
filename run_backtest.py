@@ -16,7 +16,8 @@ def run_strategy(pair_name, sl_pips=None, tp_pips=None, spread_pips=None,
     """
     Runs the full pipeline for ONE pair: data -> signals -> backtest -> stats.
 
-    strategy: which entry in core/strategies.py STRATEGIES to run.
+    strategy: a strategy's name — the filename (without .py) of a file in
+              the /strategies folder; they're discovered automatically.
     params:   that strategy's own knobs, e.g. {"window": 20}. Anything left
               out falls back to the strategy's declared default. Stop, target
               and hold time are NOT strategy params — they belong to the
