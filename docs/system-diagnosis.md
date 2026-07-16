@@ -1,5 +1,13 @@
 # System Diagnosis — full-repo sweep
 
+> **Status (2026-07-16): historical snapshot.** This document was the
+> deliverable for Issue #4 and is what produced GitHub issues **#5–#12** —
+> those are now the live tracker, so follow them, not this file. Several
+> findings here have since been fixed (journal rebuilt, backend hardened,
+> all six frontend bugs, margin/account layer, engine + API tests, stale
+> CSVs regenerated, dead worktree removed). Kept as the record of what the
+> sweep found. `docs/flagged.md` tracks what's still open.
+
 Deliverable for GitHub Issue #4. **Two independent audit passes** were run over
 the whole repo; the second pass found 8 items the first missed (all merged in
 below, marked 🆕).
