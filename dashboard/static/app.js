@@ -18,6 +18,32 @@ let STRATEGIES = [];
 let STRATEGY_ERRORS = [];
 let lastSeries = null;
 
+// Escape anything before it goes into innerHTML. Today these strings come
+// from local files you write and from the engine, so it's not a live attack
+// vector — but the Tracker page will soon show broker data, and a stray
+// "<" in a note shouldn't be able to break (or rewrite) the page.
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+// One fetch path that always yields a useful Error instead of a silent blank
+// page or a cryptic JSON.parse failure.
+async function fetchJSON(url, opts) {
+  let res;
+  try {
+    res = await fetch(url, opts);
+  } catch {
+    throw new Error(`Couldn't reach ${url} — is the server running?`);
+  }
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(`${url} returned a non-JSON response (HTTP ${res.status}).`);
+  }
+  if (!res.ok) throw new Error(data.error || `${url} failed (HTTP ${res.status}).`);
+  return data;
+}
+
 /* ---------- sidebar ---------- */
 $("toggle").addEventListener("click", () => {
   const collapsed = document.body.classList.toggle("collapsed");
@@ -68,16 +94,24 @@ $("use-defaults").addEventListener("change", (e) => {
   $("tp").disabled = e.target.checked;
 });
 
+// Whether the app is usable at all — false when no strategy files loaded, so
+// the Run button's finally clause can't wrongly re-enable it.
+let ready = false;
+
+function refreshRunButton() {
+  $("run").disabled = !ready || selectedPairs().length === 0;
+}
+
 /* The strategy picker and its knobs are built from what the backend
-   declares — adding a strategy in core/strategies.py is enough to make it
-   appear here, with its own parameters, without touching this file. */
+   declares — dropping a file in /strategies is enough to make it appear
+   here, with its own parameters, without touching this file. */
 async function loadStrategies() {
-  const data = await (await fetch("/api/strategies")).json();
+  const data = await fetchJSON("/api/strategies");
   STRATEGIES = data.strategies || [];
   STRATEGY_ERRORS = data.errors || [];
 
   $("strategy").innerHTML = STRATEGIES.map(
-    (s) => `<option value="${s.name}">${s.label}</option>`).join("");
+    (s) => `<option value="${esc(s.name)}">${esc(s.label)}</option>`).join("");
   $("strategy").addEventListener("change", renderStrategyParams);
   renderStrategyParams();
 
@@ -86,7 +120,7 @@ async function loadStrategies() {
   const box = $("strategy-errors");
   if (STRATEGY_ERRORS.length) {
     box.innerHTML = STRATEGY_ERRORS.map(
-      (e) => `<div><strong>${e.name}.py</strong> failed to load — ${e.error}</div>`).join("");
+      (e) => `<div><strong>${esc(e.name)}.py</strong> failed to load — ${esc(e.error)}</div>`).join("");
     box.hidden = false;
   } else {
     box.hidden = true;
@@ -94,7 +128,6 @@ async function loadStrategies() {
 
   if (!STRATEGIES.length) {
     $("strategy-desc").textContent = "No strategy files found in /strategies.";
-    $("run").disabled = true;
   }
 }
 
@@ -108,10 +141,10 @@ function renderStrategyParams() {
   $("strategy-desc").textContent = s.description || "";
   $("strategy-params").innerHTML = s.params.map((p) => `
     <label class="field">
-      <span>${p.label}</span>
-      <input type="number" class="sparam" data-name="${p.name}"
-             value="${p.default}" min="${p.min ?? ""}" max="${p.max ?? ""}"
-             step="${p.step ?? 1}">
+      <span>${esc(p.label)}</span>
+      <input type="number" class="sparam" data-name="${esc(p.name)}"
+             value="${esc(p.default)}" min="${esc(p.min ?? "")}" max="${esc(p.max ?? "")}"
+             step="${esc(p.step ?? 1)}">
     </label>`).join("");
 }
 
@@ -119,21 +152,21 @@ const strategyParams = () => Object.fromEntries(
   [...document.querySelectorAll(".sparam")].map((el) => [el.dataset.name, Number(el.value)]));
 
 async function loadPairs() {
-  PAIRS = await (await fetch("/api/pairs")).json();
+  PAIRS = await fetchJSON("/api/pairs");
   $("pair-list").innerHTML = PAIRS.map((p) => `
-    <div class="pair-item on" data-pair="${p.name}" style="--pc:${p.color}">
+    <div class="pair-item on" data-pair="${esc(p.name)}" style="--pc:${esc(p.color)}">
       <span class="pair-box">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"
              stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
       </span>
       <span class="pair-dot"></span>
-      <span>${p.name}</span>
+      <span>${esc(p.name)}</span>
     </div>`).join("");
 
   document.querySelectorAll(".pair-item").forEach((el) => {
     el.addEventListener("click", () => {
       el.classList.toggle("on");
-      $("run").disabled = selectedPairs().length === 0;
+      refreshRunButton();
     });
   });
 }
@@ -141,12 +174,26 @@ async function loadPairs() {
 const selectedPairs = () =>
   [...document.querySelectorAll(".pair-item.on")].map((el) => el.dataset.pair);
 
+/* ---------- startup ---------- */
+async function init() {
+  try {
+    await Promise.all([loadStrategies(), loadPairs()]);
+    ready = STRATEGIES.length > 0;
+  } catch (err) {
+    // A failed load used to leave the sidebar mysteriously empty. Say so.
+    $("error-msg").textContent = err.message;
+    show("error");
+    ready = false;
+  }
+  refreshRunButton();
+}
+
 /* ---------- run ---------- */
 $("run").addEventListener("click", run);
 
 async function run() {
   const pairs = selectedPairs();
-  if (!pairs.length) return;
+  if (!pairs.length || !ready) return;
 
   show("loading");
   $("run").disabled = true;
@@ -162,22 +209,22 @@ async function run() {
   };
 
   try {
-    const res = await fetch("/api/backtest", {
+    const data = await fetchJSON("/api/backtest", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Backtest failed.");
-    // Show first, then draw: the chart measures its container, and a
-    // hidden container measures zero.
+    // Show first, then draw: the chart measures its container, and a hidden
+    // container measures zero.
     show("results");
     render(data);
   } catch (err) {
     $("error-msg").textContent = err.message;
     show("error");
   } finally {
-    $("run").disabled = false;
+    // Only re-enable if the app is actually usable — never resurrect a
+    // button that was disabled because there are no strategies.
+    refreshRunButton();
   }
 }
 
@@ -231,7 +278,7 @@ function render(data) {
 function renderLegend(series) {
   $("legend").innerHTML = series.map((s) => `
     <span class="legend-item">
-      <span class="legend-swatch" style="background:${s.color}"></span>${s.pair}
+      <span class="legend-swatch" style="background:${esc(s.color)}"></span>${esc(s.pair)}
     </span>`).join("");
 }
 
@@ -267,6 +314,7 @@ function renderEquity(series) {
     <line x1="${pad.l}" y1="${Y(0).toFixed(1)}" x2="${width - pad.r}" y2="${Y(0).toFixed(1)}"
           stroke="#4b5563" stroke-width="1" stroke-dasharray="4 4"/>` : "";
 
+  // x-axis: trade number, a handful of evenly-spaced ticks
   const xStep = Math.max(1, Math.round(maxLen / 6));
   let xLabels = "";
   for (let i = 0; i < maxLen; i += xStep) {
@@ -276,14 +324,12 @@ function renderEquity(series) {
 
   const lines = live.map((s) => {
     const d = s.points.map((v, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join("");
-    return `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="1.8"
+    return `<path d="${d}" fill="none" stroke="${esc(s.color)}" stroke-width="1.8"
                   stroke-linejoin="round" stroke-linecap="round"/>`;
   }).join("");
 
   wrap.innerHTML = `<svg viewBox="0 0 ${width} ${height}" height="${height}">
-    ${grid}${zero}${lines}
-    <text x="${pad.l}" y="${height - 8}" fill="#6b7280" font-size="11"
-          text-anchor="middle" opacity="0"></text>
+    ${grid}${zero}${lines}${xLabels}
   </svg>`;
 }
 
@@ -303,12 +349,15 @@ function renderTrades(trades) {
   const colors = Object.fromEntries(PAIRS.map((p) => [p.name, p.color]));
   $("trades-scroll").innerHTML = trades.map((t) => {
     const r = t.r_multiple ?? 0;
+    // exit_reason is always set by the engine today, but guarding it means an
+    // API change (or a live trade with no reason) can't blank the whole list.
+    const reason = (t.exit_reason || "—").replace(/_/g, " ");
     return `<div class="trade-row">
-      <span class="trade-date">${t.entry_date}</span>
+      <span class="trade-date">${esc(t.entry_date)}</span>
       <span class="trade-pair">
-        <span class="pair-dot" style="--pc:${colors[t.pair] || "#888"}"></span>${t.pair}
+        <span class="pair-dot" style="--pc:${esc(colors[t.pair] || "#888")}"></span>${esc(t.pair)}
       </span>
-      <span class="trade-reason">${t.exit_reason.replace(/_/g, " ")}</span>
+      <span class="trade-reason">${esc(reason)}</span>
       <span class="trade-r ${r >= 0 ? "v-good" : "v-bad"}">${r >= 0 ? "+" : ""}${r.toFixed(2)}R</span>
     </div>`;
   }).join("");
@@ -319,7 +368,7 @@ function renderExit(reasons) {
   const total = entries.reduce((s, [, n]) => s + n, 0) || 1;
   $("exit-chart").innerHTML = entries.map(([name, n]) => `
     <div class="exit-row">
-      <span class="exit-name">${name.replace(/_/g, " ")}</span>
+      <span class="exit-name">${esc(name.replace(/_/g, " "))}</span>
       <span class="exit-bar-bg">
         <span class="exit-bar" style="width:${(n / total * 100).toFixed(1)}%;
               background:${REASON_COLORS[name] || "#64748b"}; display:block"></span>
@@ -339,7 +388,7 @@ function renderMini(c) {
     ["Ambiguous", c.ambiguous_exits ?? 0],
   ];
   $("mini-stats").innerHTML = rows.map(([k, v]) => `
-    <div class="mini-stat"><span>${k}</span><strong>${v}</strong></div>`).join("");
+    <div class="mini-stat"><span>${esc(k)}</span><strong>${esc(v)}</strong></div>`).join("");
 }
 
 /* redraw the chart when the window (and so the SVG width) changes */
@@ -349,5 +398,4 @@ window.addEventListener("resize", () => {
   resizeTimer = setTimeout(() => { if (lastSeries) renderEquity(lastSeries); }, 120);
 });
 
-loadStrategies();
-loadPairs();
+init();
