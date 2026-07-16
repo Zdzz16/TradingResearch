@@ -10,6 +10,20 @@ sourced, prioritized report I can act on. I am a solo retail trader building
 my own forex platform and learning as I go. Take your time and be thorough —
 I'm running this overnight.
 
+## Completeness & depth (read first)
+
+- **Do not stop until every section below is fully answered.** Run to
+  completion — don't cut the report short, don't summarize-and-stop, and don't
+  pause to ask me follow-up questions. If a detail is uncertain, state your
+  assumption and keep going.
+- I want a **long, detailed, comprehensive report**, not a brief overview.
+  Depth over brevity everywhere: specifics, numbers, exact tool/library names,
+  step-by-step how-to, and full code — never vague pointers.
+- Research widely: consult and cite multiple current sources per topic, prefer
+  the most recent information, and flag anything that may be out of date.
+- A long report is expected and wanted. Use clear headings so I can navigate,
+  and include the full Pine Script code inline.
+
 ## The project you're advising on
 
 A Python forex strategy-research platform I built:
@@ -127,3 +141,7 @@ free/paid and S/M/L.
 - Give me the actual Pine Script, ready to paste.
 - Be honest about the thin edge: a trustworthy, tradeable setup beats more
   features every time.
+- **Finish the whole thing before you stop.** All four areas, every
+  recommendation with its free/paid split and effort tag, the full Pine
+  Script, and the final prioritized roadmap. Don't wrap up early — a complete,
+  in-depth report is the point.
