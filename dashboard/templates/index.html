@@ -118,6 +118,25 @@
         </label>
       </div>
 
+      <div class="control-group">
+        <div class="control-title">Period</div>
+        <!-- The split that turns a result from "interesting" into "believable":
+             tune on In-sample, then confirm once on Out-of-sample. -->
+        <div class="presets" id="presets">
+          <button type="button" class="preset" data-preset="full">Full</button>
+          <button type="button" class="preset" data-preset="is">In-sample</button>
+          <button type="button" class="preset" data-preset="oos">Out-of-sample</button>
+        </div>
+        <label class="field">
+          <span>From</span>
+          <input type="date" id="start-date">
+        </label>
+        <label class="field">
+          <span>To</span>
+          <input type="date" id="end-date">
+        </label>
+      </div>
+
       <button class="run-btn" id="run">Run backtest</button>
     </div>
   </div>
@@ -185,7 +204,7 @@
     <!-- equity curve -->
     <section class="panel">
       <div class="panel-head">
-        <h2>Equity curve</h2>
+        <h2>Equity curve <span class="period-label" id="period-label"></span></h2>
         <div class="legend" id="legend"></div>
       </div>
       <div class="chart-wrap" id="equity-wrap"></div>

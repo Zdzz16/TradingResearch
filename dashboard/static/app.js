@@ -18,6 +18,14 @@ let STRATEGIES = [];
 let STRATEGY_ERRORS = [];
 let lastSeries = null;
 
+// The full window the cache covers; the date inputs stay inside it so a run
+// is always offline and instant. Overwritten from /api/strategies.
+let DEFAULTS = { start: "2015-01-01", end: "2024-12-31" };
+let PERIODS = {};
+
+// Remembers your last run so a reload doesn't wipe your setup.
+const SETTINGS_KEY = "tr-backtest-settings";
+
 // Escape anything before it goes into innerHTML. Today these strings come
 // from local files you write and from the engine, so it's not a live attack
 // vector — but the Tracker page will soon show broker data, and a stray
@@ -109,6 +117,7 @@ async function loadStrategies() {
   const data = await fetchJSON("/api/strategies");
   STRATEGIES = data.strategies || [];
   STRATEGY_ERRORS = data.errors || [];
+  if (data.defaults) DEFAULTS = data.defaults;
 
   $("strategy").innerHTML = STRATEGIES.map(
     (s) => `<option value="${esc(s.name)}">${esc(s.label)}</option>`).join("");
@@ -174,11 +183,102 @@ async function loadPairs() {
 const selectedPairs = () =>
   [...document.querySelectorAll(".pair-item.on")].map((el) => el.dataset.pair);
 
+/* ---------- period (date range + in-sample / out-of-sample split) ---------- */
+
+// Split the covered window ~60/40: tune on the earlier In-sample stretch,
+// then confirm ONCE on the untouched Out-of-sample tail. The 60% boundary is
+// derived from whatever full range the cache actually holds.
+function periodsFrom(d) {
+  const sy = +d.start.slice(0, 4), ey = +d.end.slice(0, 4);
+  const split = sy + Math.round((ey - sy) * 0.6);
+  return {
+    full: [d.start, d.end],
+    is: [d.start, `${split}-12-31`],
+    oos: [`${split + 1}-01-01`, d.end],
+  };
+}
+
+function setupPeriod() {
+  PERIODS = periodsFrom(DEFAULTS);
+  const from = $("start-date"), to = $("end-date");
+  // Keep the inputs inside the cached window, so a run never has to download.
+  from.min = to.min = DEFAULTS.start;
+  from.max = to.max = DEFAULTS.end;
+  [from.value, to.value] = PERIODS.full;
+
+  document.querySelectorAll(".preset").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      [from.value, to.value] = PERIODS[btn.dataset.preset];
+      markActivePreset();
+    });
+  });
+  from.addEventListener("change", markActivePreset);
+  to.addEventListener("change", markActivePreset);
+  markActivePreset();
+}
+
+// Highlight whichever preset the current dates match (none = a custom range).
+function markActivePreset() {
+  const now = [$("start-date").value, $("end-date").value];
+  document.querySelectorAll(".preset").forEach((btn) => {
+    const [s, e] = PERIODS[btn.dataset.preset];
+    btn.classList.toggle("on", now[0] === s && now[1] === e);
+  });
+}
+
+/* ---------- remember the last run ---------- */
+
+function saveSettings() {
+  const s = {
+    pairs: selectedPairs(),
+    strategy: $("strategy").value,
+    params: strategyParams(),
+    useDefaults: $("use-defaults").checked,
+    sl: $("sl").value, tp: $("tp").value, maxHold: $("max-hold").value,
+    start: $("start-date").value, end: $("end-date").value,
+  };
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch { /* full/blocked — fine */ }
+}
+
+function applySavedSettings() {
+  let s;
+  try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); } catch { s = null; }
+  if (!s) return;
+
+  if (s.strategy && STRATEGIES.some((x) => x.name === s.strategy)) {
+    $("strategy").value = s.strategy;
+    renderStrategyParams();            // rebuilds the inputs before we fill them
+    if (s.params) {
+      document.querySelectorAll(".sparam").forEach((el) => {
+        if (s.params[el.dataset.name] != null) el.value = s.params[el.dataset.name];
+      });
+    }
+  }
+  if (typeof s.useDefaults === "boolean") {
+    $("use-defaults").checked = s.useDefaults;
+    $("use-defaults").dispatchEvent(new Event("change"));  // sync sl/tp enabled state
+  }
+  if (s.sl) $("sl").value = s.sl;
+  if (s.tp) $("tp").value = s.tp;
+  if (s.maxHold) $("max-hold").value = s.maxHold;
+  if (s.start) $("start-date").value = s.start;
+  if (s.end) $("end-date").value = s.end;
+  markActivePreset();
+
+  if (Array.isArray(s.pairs)) {
+    document.querySelectorAll(".pair-item").forEach((el) => {
+      el.classList.toggle("on", s.pairs.includes(el.dataset.pair));
+    });
+  }
+}
+
 /* ---------- startup ---------- */
 async function init() {
   try {
     await Promise.all([loadStrategies(), loadPairs()]);
     ready = STRATEGIES.length > 0;
+    setupPeriod();
+    applySavedSettings();
   } catch (err) {
     // A failed load used to leave the sidebar mysteriously empty. Say so.
     $("error-msg").textContent = err.message;
@@ -206,7 +306,10 @@ async function run() {
     max_hold_days: Number($("max-hold").value),
     sl_pips: useDefaults ? null : Number($("sl").value),
     tp_pips: useDefaults ? null : Number($("tp").value),
+    start: $("start-date").value,
+    end: $("end-date").value,
   };
+  saveSettings();   // remember this run for next time
 
   try {
     const data = await fetchJSON("/api/backtest", {
@@ -266,6 +369,12 @@ function render(data) {
   // Drawdown gets no colour: every strategy has one, and there's no honest
   // threshold that says which number is "bad" — it's context, not a verdict.
   $("c-drawdown").textContent = `${(c.max_drawdown_r ?? 0).toFixed(2)} R`;
+
+  // Show exactly which window produced this chart — so an in-sample run and
+  // an out-of-sample run are never confused for each other.
+  if (data.settings) {
+    $("period-label").textContent = `${data.settings.start} → ${data.settings.end}`;
+  }
 
   lastSeries = data.series;
   renderLegend(data.series);

@@ -195,6 +195,31 @@ body:not(.page-backtest) .controls { display: none; }
 .field input[type="number"]:focus { outline: none; border-color: var(--accent); }
 .field input[type="number"]:disabled { opacity: 0.4; cursor: not-allowed; }
 
+.field input[type="date"] {
+  flex: 1; min-width: 0; padding: 6px 8px;
+  background: #1b1f27; color: var(--text);
+  border: 1px solid var(--border); border-radius: 6px;
+  font-size: 13px; font-family: inherit;
+}
+.field input[type="date"]:focus { outline: none; border-color: var(--accent); }
+/* the native calendar picker glyph is near-black on our dark field */
+.field input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7); cursor: pointer;
+}
+
+/* period presets — the in-sample / out-of-sample / full quick picks */
+.presets { display: flex; gap: 6px; margin-bottom: 12px; }
+.preset {
+  flex: 1; padding: 6px 4px;
+  background: #1b1f27; color: var(--text-muted);
+  border: 1px solid var(--border); border-radius: 6px;
+  font-size: 11px; font-family: inherit; font-weight: 500;
+  cursor: pointer; white-space: nowrap;
+  transition: background var(--speed) ease, color var(--speed) ease, border-color var(--speed) ease;
+}
+.preset:hover { background: #212630; color: var(--text); }
+.preset.on { background: rgba(74, 158, 255, 0.15); border-color: var(--accent); color: var(--text); }
+
 .switch-row {
   display: flex; align-items: center; gap: 8px;
   margin-bottom: 12px; cursor: pointer; color: var(--text-muted);
@@ -289,6 +314,10 @@ body:not(.page-backtest) .controls { display: none; }
   gap: 16px; margin-bottom: 14px;
 }
 .panel-head h2 { font-size: 14px; font-weight: 600; }
+.period-label {
+  font-size: 12px; font-weight: 500; color: var(--text-dim);
+  font-variant-numeric: tabular-nums; margin-left: 6px;
+}
 
 .legend { display: flex; flex-wrap: wrap; gap: 14px; }
 .legend-item {
