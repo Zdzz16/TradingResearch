@@ -519,7 +519,8 @@ init();
    comparing a strategy against its own tuning possible. */
 
 let RUNS = [];
-let slots = [null, null];          // one entry per select; a run key or null
+let slots = [null];   // one entry per select; a run key or null.
+                      // Starts as ONE — extra slots appear only on '+ Add'.
 
 const RUN_COLORS = ["#4a9eff", "#22c55e", "#eab308", "#a78bfa",
                     "#f97316", "#ec4899", "#14b8a6", "#ef4444"];
@@ -557,6 +558,7 @@ async function loadRuns() {
   // keep valid picks; otherwise fill the first slots with what we have
   const keys = new Set(RUNS.map((r) => r.key));
   slots = slots.map((k) => (keys.has(k) ? k : null));
+  // fill any empty slot with a run that isn't already shown
   RUNS.forEach((r) => {
     if (!slots.includes(r.key)) {
       const free = slots.indexOf(null);
@@ -612,7 +614,7 @@ function renderVsRow() {
 
   $("clear-runs").addEventListener("click", async () => {
     await fetch("/api/runs", { method: "DELETE" });
-    slots = [null, null];
+    slots = [null];
     loadRuns();
   });
 }
@@ -623,28 +625,32 @@ const pickedRuns = () =>
 function renderComparison() {
   const runs = pickedRuns();
 
-  const COLS = [
-    ["Trades", (s) => s.total_trades ?? 0, false],
-    ["Win %", (s) => (s.win_rate ?? 0).toFixed(1), false],
-    ["Break-even %", (s) => s.breakeven_win_rate == null ? "—" : s.breakeven_win_rate.toFixed(1), false],
-    ["Expectancy", (s) => (s.expectancy_r ?? 0).toFixed(3) + "R", true],
-    ["Total R", (s) => (s.total_r ?? 0).toFixed(2), true],
-    ["Max DD", (s) => (s.max_drawdown_r ?? 0).toFixed(2) + "R", false],
+  // Strategies across the TOP (their name in the colour they get on the
+  // curve), stats down the side. Reads like a spec sheet, and adding a
+  // strategy widens the table instead of clipping the stats off the edge.
+  const STATS = [
+    ["Trades", (t) => t.total_trades ?? 0, false],
+    ["Win rate", (t) => `${(t.win_rate ?? 0).toFixed(1)}%`, false],
+    ["Break-even win rate", (t) => t.breakeven_win_rate == null ? "—" : `${t.breakeven_win_rate.toFixed(1)}%`, false],
+    ["Expectancy", (t) => `${(t.expectancy_r ?? 0).toFixed(3)}R`, true],
+    ["Total R", (t) => (t.total_r ?? 0).toFixed(2), true],
+    ["Max drawdown", (t) => `${(t.max_drawdown_r ?? 0).toFixed(2)}R`, false],
+    ["Avg win", (t) => `+${(t.avg_win_r ?? 0).toFixed(2)}R`, false],
+    ["Avg loss", (t) => `${(t.avg_loss_r ?? 0).toFixed(2)}R`, false],
   ];
 
   $("compare-table").innerHTML = !runs.length ? "" : `
-    <thead><tr><th>Run</th>${COLS.map((c) => `<th>${c[0]}</th>`).join("")}</tr></thead>
-    <tbody>${runs.map((r) => {
-      const st = r.stats || {};
-      return `<tr>
-        <td class="name"><span class="run-dot" style="background:${r.color}"></span>${esc(runLabel(r))}</td>
-        ${COLS.map(([, get, colour]) => {
-          const v = get(st), n = parseFloat(v);
+    <thead><tr><th></th>${runs.map((r) =>
+      `<th class="run-col" style="color:${r.color}">${esc(runLabel(r))}</th>`).join("")}</tr></thead>
+    <tbody>${STATS.map(([label, get, colour]) => `
+      <tr>
+        <td class="stat-name">${label}</td>
+        ${runs.map((r) => {
+          const v = get(r.stats || {}), n = parseFloat(v);
           const cls = colour && !isNaN(n) ? (n > 0 ? "v-good" : n < 0 ? "v-bad" : "") : "";
           return `<td class="${cls}">${esc(String(v))}</td>`;
         }).join("")}
-      </tr>`;
-    }).join("")}</tbody>`;
+      </tr>`).join("")}</tbody>`;
 
   const series = runs.map((r) => ({
     pair: runLabel(r), color: r.color, points: pooledEquity(r),
