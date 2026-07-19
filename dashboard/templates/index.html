@@ -230,6 +230,46 @@
   </div>
 
   <!-- every other tab, until it has something on it -->
+  <!-- COMPARE: saved runs side by side -->
+  <div class="page" id="page-compare" hidden>
+    <div class="state" id="compare-empty">
+      <div class="state-inner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/>
+          <rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/>
+        </svg>
+        <p>No saved runs yet. Run a backtest and it's saved here automatically.</p>
+        <p class="state-hint">Each strategy <em>and its parameters</em> gets its own slot,
+          so MA20 and MA50 sit side by side instead of overwriting each other.</p>
+      </div>
+    </div>
+
+    <div id="compare-results" hidden>
+      <!-- pick what to compare: [select] vs [select], one line -->
+      <section class="panel">
+        <div class="vs-row" id="vs-row"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Side by side</h2>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table" id="compare-table"></table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Equity curves</h2>
+          <div class="legend" id="compare-legend"></div>
+        </div>
+        <div class="chart-wrap" id="compare-chart"></div>
+      </section>
+    </div>
+  </div>
+
   <div class="page state" id="page-blank" hidden>
     <div class="state-inner">
       <p id="blank-label"></p>

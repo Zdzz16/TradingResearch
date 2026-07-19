@@ -300,6 +300,8 @@ def api_backtest():
     SAVED_RUNS[key] = {
         "key": key,
         "strategy": settings["strategy"],
+        "strategy_label": (load_strategies().get(settings["strategy"], {})
+                           .get("label", settings["strategy"])),
         "params": settings["params"],
         "pairs": settings["pairs"],
         "start": settings["start"],
@@ -356,9 +358,11 @@ def api_account():
 @app.route("/api/runs")
 def api_runs():
     """Every backtest run held in memory. One slot per strategy+params, so
-    nothing appears twice."""
+    nothing appears twice. Includes each run's equity series so the Compare
+    page can draw the curves without re-running anything."""
     return jsonify([
-        {k: run[k] for k in ("key", "strategy", "params", "pairs", "start", "end", "stats")}
+        {k: run[k] for k in ("key", "strategy", "strategy_label", "params",
+                             "pairs", "start", "end", "stats", "series")}
         for run in SAVED_RUNS.values()
     ])
 

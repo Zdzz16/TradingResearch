@@ -407,3 +407,82 @@ body:not(.page-backtest) .controls { display: none; }
   font-size: 19px; font-weight: 650; letter-spacing: -0.3px;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- data tables (Compare / Tracker) ---------- */
+.table-scroll { overflow-x: auto; }
+.data-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 12.5px; font-variant-numeric: tabular-nums;
+}
+.data-table th {
+  text-align: right; font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-dim);
+  padding: 0 10px 10px; white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+.data-table th:first-child, .data-table td:first-child { text-align: left; }
+.data-table td {
+  text-align: right; padding: 9px 10px; color: var(--text-muted);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04); white-space: nowrap;
+}
+.data-table tbody tr:hover td { background: var(--hover); }
+.data-table td.name { color: var(--text); font-weight: 600; }
+.data-table .sub-label { color: var(--text-dim); font-weight: 400; font-size: 11.5px; }
+
+.run-dot { width: 9px; height: 9px; border-radius: 2px; display: inline-block; margin-right: 7px; }
+
+.ghost-btn {
+  padding: 5px 10px; border-radius: 6px;
+  background: none; border: 1px solid var(--border);
+  color: var(--text-muted); font-size: 12px; font-family: inherit; cursor: pointer;
+  transition: background var(--speed) ease, color var(--speed) ease;
+}
+.ghost-btn:hover { background: var(--hover); color: var(--text); }
+
+.state-hint { font-size: 12px; color: var(--text-dim); margin-top: 8px; max-width: 46ch; }
+
+.pill {
+  font-size: 10.5px; padding: 2px 7px; border-radius: 5px;
+  background: rgba(255, 255, 255, 0.06); color: var(--text-muted);
+}
+.pill.open { background: rgba(74, 158, 255, 0.15); color: var(--accent); }
+
+/* ---------- Compare: the [select] vs [select] row ---------- */
+/* nowrap + shrinkable selects: the row stays on ONE line at any width,
+   the dropdowns give up space first and the buttons keep their size */
+.vs-row { display: flex; align-items: center; flex-wrap: nowrap; gap: 12px; }
+.vs-row .select-wrap { flex: 1 1 140px; min-width: 0; }
+.vs-row .select-wrap select { text-overflow: ellipsis; }
+.vs-row .vs-sep, .vs-row .vs-actions { flex: 0 0 auto; }
+/* leave room for the warning badge beside the chevrons */
+.vs-row .select-wrap.invalid select { padding-right: 52px; }
+.vs-row .select-wrap.invalid select {
+  border-color: rgba(239, 68, 68, 0.65);
+  background: rgba(239, 68, 68, 0.08);
+  color: #fca5a5;
+}
+.vs-sep {
+  font-size: 12px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text-dim);
+}
+.vs-actions { margin-left: auto; display: flex; gap: 8px; }
+
+/* the ! triangle, with its own hover explanation */
+.warn-badge {
+  position: absolute; right: 28px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; color: var(--bad); cursor: help;
+}
+.warn-badge svg { width: 16px; height: 16px; display: block; }
+.warn-badge::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%);
+  padding: 7px 10px; border-radius: 6px;
+  background: #22262e; border: 1px solid var(--border);
+  color: var(--text); font-size: 11.5px; font-weight: 400;
+  line-height: 1.4; width: max-content; max-width: 230px;
+  white-space: normal; text-align: left;
+  opacity: 0; pointer-events: none;
+  transition: opacity 120ms ease; z-index: 20;
+}
+.warn-badge:hover::after { opacity: 1; }

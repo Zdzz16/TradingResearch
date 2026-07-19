@@ -77,20 +77,21 @@ const PAGE_META = {
 // The controls panel belongs to the Backtest tab, so the body carries the
 // current page and the CSS decides what shows. Every other tab is a blank
 // page with its name on it until we build it.
+const BUILT_PAGES = ["backtest", "compare"];
+
 function setPage(page) {
-  const isBacktest = page === "backtest";
-  document.body.classList.toggle("page-backtest", isBacktest);
-  $("page-backtest").hidden = !isBacktest;
-  $("page-blank").hidden = isBacktest;
+  document.body.classList.toggle("page-backtest", page === "backtest");
+  BUILT_PAGES.forEach((p) => { $(`page-${p}`).hidden = p !== page; });
+  $("page-blank").hidden = BUILT_PAGES.includes(page);
 
   const [title, sub] = PAGE_META[page] || PAGE_META.backtest;
   $("page-title").textContent = title;
   $("page-sub").textContent = sub;
 
-  if (isBacktest) {
-    // the chart couldn't measure itself while the page was hidden
-    if (lastSeries) renderEquity(lastSeries);
-  } else {
+  // charts can't measure themselves while hidden, so draw on arrival
+  if (page === "backtest" && lastSeries) renderEquity(lastSeries);
+  if (page === "compare") loadRuns();
+  if (!BUILT_PAGES.includes(page)) {
     $("blank-label").textContent = `${title} — nothing here yet.`;
   }
 }
@@ -393,8 +394,8 @@ function renderLegend(series) {
 
 /* Hand-drawn SVG so the chart is exactly as clean as we want it — no
    charting library, no CDN, nothing to break offline. */
-function renderEquity(series) {
-  const wrap = $("equity-wrap");
+function renderEquity(series, targetId = "equity-wrap") {
+  const wrap = $(targetId);
   const width = wrap.clientWidth || 760;
   const height = 320;
   const pad = { l: 46, r: 14, t: 12, b: 28 };
@@ -508,3 +509,162 @@ window.addEventListener("resize", () => {
 });
 
 init();
+
+
+/* ====================== COMPARE PAGE ======================
+   Pick saved runs in [select] vs [select] and see them side by side.
+   Runs are saved by /api/backtest keyed by strategy + params, so re-running
+   the SAME strategy with the SAME settings replaces its slot (no pile of
+   duplicates), while MA20 and MA50 stay separate — which is what makes
+   comparing a strategy against its own tuning possible. */
+
+let RUNS = [];
+let slots = [null, null];          // one entry per select; a run key or null
+
+const RUN_COLORS = ["#4a9eff", "#22c55e", "#eab308", "#a78bfa",
+                    "#f97316", "#ec4899", "#14b8a6", "#ef4444"];
+
+const CHEVRONS = `<svg class="select-chevrons" viewBox="0 0 24 24" fill="none"
+     stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+     stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>`;
+
+const WARN = (tip) => `<span class="warn-badge" data-tip="${esc(tip)}">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+       stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+    <path d="M12 9v4"/><path d="M12 17h.01"/>
+  </svg></span>`;
+
+function runLabel(run) {
+  const params = Object.entries(run.params || {}).map(([k, v]) => `${k} ${v}`).join(", ");
+  const name = run.strategy_label || run.strategy;
+  return params ? `${name} (${params})` : name;
+}
+
+async function loadRuns() {
+  try {
+    RUNS = await (await fetch("/api/runs")).json();
+  } catch {
+    RUNS = [];
+  }
+  RUNS.forEach((r, i) => { r.color = RUN_COLORS[i % RUN_COLORS.length]; });
+
+  const has = RUNS.length > 0;
+  $("compare-empty").hidden = has;
+  $("compare-results").hidden = !has;
+  if (!has) return;
+
+  // keep valid picks; otherwise fill the first slots with what we have
+  const keys = new Set(RUNS.map((r) => r.key));
+  slots = slots.map((k) => (keys.has(k) ? k : null));
+  RUNS.forEach((r) => {
+    if (!slots.includes(r.key)) {
+      const free = slots.indexOf(null);
+      if (free !== -1) slots[free] = r.key;
+    }
+  });
+
+  renderVsRow();
+  renderComparison();
+}
+
+// [select] vs [select] ... + Add | Clear all — all on one line.
+function renderVsRow() {
+  const options = (selected) => {
+    const taken = new Set(slots.filter((k) => k && k !== selected));
+    const opts = RUNS.filter((r) => !taken.has(r.key)).map((r) =>
+      `<option value="${esc(r.key)}" ${r.key === selected ? "selected" : ""}>${esc(runLabel(r))}</option>`);
+    return `<option value="" ${selected ? "" : "selected"}>— pick a strategy —</option>` + opts.join("");
+  };
+
+  const parts = slots.map((key, i) => {
+    // Red + a hover-explained warning when this slot has nothing to show.
+    const bad = !key;
+    const why = RUNS.length
+      ? "No strategy picked for this slot yet."
+      : "No backtest data. Run this strategy on the Backtest page first — results are saved here automatically.";
+    return `<div class="select-wrap compare-select ${bad ? "invalid" : ""}" data-slot="${i}">
+        <select>${options(key)}</select>
+        ${bad ? WARN(why) : ""}${CHEVRONS}
+      </div>`;
+  });
+
+  $("vs-row").innerHTML =
+    parts.join(`<span class="vs-sep">vs</span>`) +
+    `<div class="vs-actions">
+       <button class="ghost-btn" id="add-slot">+ Add</button>
+       <button class="ghost-btn" id="clear-runs">Clear all</button>
+     </div>`;
+
+  document.querySelectorAll(".compare-select select").forEach((sel) => {
+    sel.addEventListener("change", (e) => {
+      slots[+e.target.closest(".compare-select").dataset.slot] = e.target.value || null;
+      renderVsRow();
+      renderComparison();
+    });
+  });
+
+  $("add-slot").addEventListener("click", () => {
+    slots.push(null);
+    renderVsRow();
+    renderComparison();
+  });
+
+  $("clear-runs").addEventListener("click", async () => {
+    await fetch("/api/runs", { method: "DELETE" });
+    slots = [null, null];
+    loadRuns();
+  });
+}
+
+const pickedRuns = () =>
+  slots.map((k) => RUNS.find((r) => r.key === k)).filter(Boolean);
+
+function renderComparison() {
+  const runs = pickedRuns();
+
+  const COLS = [
+    ["Trades", (s) => s.total_trades ?? 0, false],
+    ["Win %", (s) => (s.win_rate ?? 0).toFixed(1), false],
+    ["Break-even %", (s) => s.breakeven_win_rate == null ? "—" : s.breakeven_win_rate.toFixed(1), false],
+    ["Expectancy", (s) => (s.expectancy_r ?? 0).toFixed(3) + "R", true],
+    ["Total R", (s) => (s.total_r ?? 0).toFixed(2), true],
+    ["Max DD", (s) => (s.max_drawdown_r ?? 0).toFixed(2) + "R", false],
+  ];
+
+  $("compare-table").innerHTML = !runs.length ? "" : `
+    <thead><tr><th>Run</th>${COLS.map((c) => `<th>${c[0]}</th>`).join("")}</tr></thead>
+    <tbody>${runs.map((r) => {
+      const st = r.stats || {};
+      return `<tr>
+        <td class="name"><span class="run-dot" style="background:${r.color}"></span>${esc(runLabel(r))}</td>
+        ${COLS.map(([, get, colour]) => {
+          const v = get(st), n = parseFloat(v);
+          const cls = colour && !isNaN(n) ? (n > 0 ? "v-good" : n < 0 ? "v-bad" : "") : "";
+          return `<td class="${cls}">${esc(String(v))}</td>`;
+        }).join("")}
+      </tr>`;
+    }).join("")}</tbody>`;
+
+  const series = runs.map((r) => ({
+    pair: runLabel(r), color: r.color, points: pooledEquity(r),
+  })).filter((s) => s.points.length);
+
+  $("compare-legend").innerHTML = series.map((s) => `
+    <span class="legend-item">
+      <span class="legend-swatch" style="background:${s.color}"></span>${esc(s.pair)}
+    </span>`).join("");
+  renderEquity(series, "compare-chart");
+}
+
+// A run holds one series per pair; the comparison wants the portfolio view,
+// so chain their per-trade steps into a single cumulative-R curve.
+function pooledEquity(run) {
+  const steps = [];
+  (run.series || []).forEach((s) => {
+    let prev = 0;
+    s.points.forEach((v) => { steps.push(v - prev); prev = v; });
+  });
+  let total = 0;
+  return steps.map((d) => (total += d));
+}
