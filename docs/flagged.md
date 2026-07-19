@@ -1,8 +1,12 @@
 # Flagged
 
 Things that need **your decision**, or that you should know before trusting a
-number or spending money. Not a bug list (that's the GitHub issues). Not
-design notes (that's `docs/notes.md`).
+number or spending money. Not a bug list — that's the GitHub issues. Not the
+build list — that's `docs/roadmap.md`.
+
+> **docs/ is just two files:** `roadmap.md` (what we're building, and why) and
+> this one (open decisions + what to distrust). GitHub issues #5–#12 track
+> outstanding cleanup work.
 
 Last updated: 2026-07-16
 

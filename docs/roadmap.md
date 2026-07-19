@@ -104,10 +104,27 @@ Tags: `Feature` new capability · `Upgrade` improves something we have ·
 
 ## Dashboard & UX
 
-- **Compare page** — `Feature` · M
-  Saved runs side by side: stats table + overlaid equity curves. `/api/runs` is
-  built and tested (keyed by strategy **+ params**, so MA20 and MA50 don't
-  overwrite each other) — this only needs the screen.
+- **Compare page** — `Feature` · M · ⚠️ **NOT FINAL — needs work**
+  A first version is live: `[select] vs [select]` with `+ Add`, a transposed
+  table (strategies across the top in their curve colour, stats down the
+  side), and overlaid equity curves. Backed by `/api/runs`, keyed by strategy
+  **+ params** so MA20 and MA50 don't overwrite each other.
+  **This is a draft, not the finished page.** Layout, what's shown, and how it
+  behaves are still Filip's call — *ask first, then build*. Do not restyle or
+  restructure it unprompted.
+
+- **Tracker page** — `Feature` · M
+  Real trades shown with **the same analytics the backtest produces** — win
+  rate, expectancy in R, drawdown, exit reasons, equity curve. The point is
+  the like-for-like question: *did live match what the backtest promised?*
+  That loop catches broken assumptions before they get expensive (slippage
+  worse than modelled, spreads wider than the registry's estimate, signals
+  that fire differently in real time).
+  *Design notes: live trades must land in the same shape as engine output to
+  reuse `summarize()` and the charts unchanged — the `journal/` package
+  already enforces that with one schema across both tables. `/api/journal/live`
+  is built and tested. And a trade's **reasoning** still has to be typed by a
+  human: the broker API only ever knows prices and times.*
 
 - **Strategy report page** — `Feature` · M
   Pick one strategy and see everything: every stat and every backtest we've run
