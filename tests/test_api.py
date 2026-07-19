@@ -117,7 +117,10 @@ def test_backtest_returns_series_stats_and_trades(client):
     r = post(client, "/api/backtest", {"pairs": ["EURUSD"], "params": {"window": 20}})
     assert r.status_code == 200
     d = r.get_json()
-    assert len(d["trades"]) == 127          # the long-standing regression figure
+    # Regression baseline. Was 127 on Yahoo; 129 since Dukascopy became the
+    # default source — different (real, traded) prices legitimately produce
+    # different trades. Moves only when the data or engine deliberately does.
+    assert len(d["trades"]) == 129
     assert d["series"][0]["color"] == "#1f77b4"   # hex straight from the registry
     assert d["combined"]["breakeven_win_rate"] is not None
 
@@ -145,7 +148,7 @@ def test_account_sizes_a_real_backtest(client):
     assert r.status_code == 200
     d = r.get_json()
     assert d["summary"]["initial_balance"] == 10_000
-    assert d["summary"]["trades_taken"] + d["summary"]["trades_skipped"] == 127
+    assert d["summary"]["trades_taken"] + d["summary"]["trades_skipped"] == 129
 
 
 def test_account_settings_are_validated(client):

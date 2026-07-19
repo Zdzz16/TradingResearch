@@ -7,7 +7,8 @@ from core.strategies import apply_strategy, strategy_slug
 from core.engine import run_backtest
 from core.analysis import summarize
 from core.plotting import plot_pair_comparison
-from core.pairs import PAIRS, get_pair, pips_to_price, DEFAULT_SL_PIPS, DEFAULT_TP_PIPS
+from core.pairs import (PAIRS, get_pair, pips_to_price, symbol_for,
+                        DEFAULT_SL_PIPS, DEFAULT_TP_PIPS, DEFAULT_SOURCE)
 
 START, END = "2015-01-01", "2024-12-31"
 
@@ -18,7 +19,7 @@ RESULTS_DIR = Path(__file__).resolve().parent / "results"
 
 def run_strategy(pair_name, sl_pips=None, tp_pips=None, spread_pips=None,
                  strategy="ma_crossover", params=None, max_hold_days=10,
-                 start=START, end=END, save_csv=True):
+                 start=START, end=END, save_csv=True, source=None):
     """
     Runs the full pipeline for ONE pair: data -> signals -> backtest -> stats.
 
@@ -50,7 +51,8 @@ def run_strategy(pair_name, sl_pips=None, tp_pips=None, spread_pips=None,
     if spread_pips is None:
         spread_pips = pair.get("spread_pips", 0)
 
-    data = get_data(pair["ticker"], start, end)
+    source = source or pair.get("source", DEFAULT_SOURCE)
+    data = get_data(symbol_for(pair_name, source), start, end, source=source)
     data, resolved = apply_strategy(data, strategy, params)
 
     trades = run_backtest(

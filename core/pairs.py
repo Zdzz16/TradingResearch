@@ -37,17 +37,45 @@ sense on a ~$2,000 instrument, so it uses 200/400 pips = $20/$40.
 #   * what you're borrowing to hold is measured in the BASE currency, so the
 #     position's value in USD depends on whether the base already IS USD.
 # XAU is gold: "base" is an ounce, priced in USD.
+#
+# ticker / dukascopy: the same instrument's symbol at each data source.
+# Note XAUUSD: Yahoo has no spot gold, so its ticker is the GC=F FUTURES
+# proxy — Dukascopy gives us real spot, which is the main reason to switch.
 PAIRS = {
-    "EURUSD": {"ticker": "EURUSD=X", "pip_size": 0.0001, "color": "#1f77b4",
+    "EURUSD": {"ticker": "EURUSD=X", "dukascopy": "eurusd",
+               "pip_size": 0.0001, "color": "#1f77b4",
                "spread_pips": 1.0, "base": "EUR", "quote": "USD"},
-    "GBPUSD": {"ticker": "GBPUSD=X", "pip_size": 0.0001, "color": "#2ca02c",
+    "GBPUSD": {"ticker": "GBPUSD=X", "dukascopy": "gbpusd",
+               "pip_size": 0.0001, "color": "#2ca02c",
                "spread_pips": 1.5, "base": "GBP", "quote": "USD"},
-    "USDJPY": {"ticker": "USDJPY=X", "pip_size": 0.01,   "color": "#d62728",
+    "USDJPY": {"ticker": "USDJPY=X", "dukascopy": "usdjpy",
+               "pip_size": 0.01,   "color": "#d62728",
                "spread_pips": 1.0, "base": "USD", "quote": "JPY"},
-    "XAUUSD": {"ticker": "GC=F",     "pip_size": 0.1,    "color": "#daa520",
+    "XAUUSD": {"ticker": "GC=F",     "dukascopy": "xauusd",
+               "pip_size": 0.1,    "color": "#daa520",
                "spread_pips": 3.5, "sl_pips": 200, "tp_pips": 400,
                "base": "XAU", "quote": "USD"},
 }
+
+# Which data source the platform uses unless told otherwise. Yahoo stays
+# wired up so the two can be compared rather than swapped blind.
+DEFAULT_SOURCE = "dukascopy"
+SOURCES = ("dukascopy", "yahoo")
+
+# Which key in a pair's config holds its symbol at each source.
+_SYMBOL_KEY = {"yahoo": "ticker", "dukascopy": "dukascopy"}
+
+
+def symbol_for(pair_name, source=None):
+    """The symbol this pair goes by at the given data source."""
+    source = source or DEFAULT_SOURCE
+    if source not in SOURCES:
+        raise ValueError(f"Unknown data source '{source}'. Expected one of: {', '.join(SOURCES)}")
+    pair = get_pair(pair_name)
+    symbol = pair.get(_SYMBOL_KEY[source])
+    if not symbol:
+        raise ValueError(f"{pair_name} has no symbol for source '{source}'.")
+    return symbol
 
 # Used for any pair that doesn't override them. 100/200 pips on EURUSD
 # equals the 0.01/0.02 price units all results so far were produced with.
