@@ -9,6 +9,34 @@ Tags: `Feature` new capability · `Upgrade` improves something we have ·
 
 ---
 
+## ⚑ Decided: full engine rework — straight after the two dashboard pages
+
+**Agreed 2026-07-20.** Once Compare and Tracker are done, the engine gets
+rebuilt against the professional-engine research: proper event-driven
+component split (DataHandler / Strategy / Portfolio / Execution), optimised,
+and tested until it provably outputs the right numbers.
+
+Why, in order of weight:
+1. **Live execution parity.** `run_backtest()` needs a whole DataFrame and
+   runs history in one pass. Live asks a different question — *"here's my open
+   position, here's one new bar, what now?"* — which it cannot answer. Without
+   this we'd re-implement stops/trailing/break-even/time-exits a second time
+   for live, and two implementations of the same rules is exactly how live
+   silently stops matching the backtest.
+2. **Structural look-ahead prevention.** Our *execution* is proven clean, but
+   strategies are vectorised pandas over the whole series — nothing stops a
+   strategy file using `.shift(-1)` or a whole-series `max()`, and no current
+   test would catch it. Architecture beats discipline.
+
+Non-negotiable when doing it: every guarantee we already hold must be
+re-earned, not assumed — the shadow-implementation agreement, the no-look-ahead
+proof, and the 129-trade baseline. An engine with a quiet accounting bug is
+worse than no engine: it's a confident wrong answer.
+
+Interim idea if the rework slips: add a `step()` interface (one bar + open
+positions → decisions) to the existing engine, giving live parity without
+discarding the verified core.
+
 ## Validation & trust
 *Our biggest real gap — the engine is ahead of our ability to trust its output.*
 
@@ -103,6 +131,14 @@ Tags: `Feature` new capability · `Upgrade` improves something we have ·
   protect it as the watcher and bot get built.
 
 ## Dashboard & UX
+
+- **⚑ Full UI overhaul** — `Feature` · L · *after the engine rework, if time allows*
+  Filip's verdict on the current dashboard: **"it's just ugly, we need more
+  colors."** It's functional and dark but visually flat — near-monochrome with
+  one accent. This is a deliberate, whole-dashboard redesign, not per-page
+  tweaks: colour system, hierarchy, spacing, the lot. Worth trying **Claude
+  design** for it. Do not start piecemeal restyling before then — and it's his
+  call how it looks, always.
 
 - **Compare page** — `Feature` · M · ⚠️ **NOT FINAL — needs work**
   A first version is live: `[select] vs [select]` with `+ Add`, a transposed

@@ -576,7 +576,9 @@ function renderVsRow() {
     const taken = new Set(slots.filter((k) => k && k !== selected));
     const opts = RUNS.filter((r) => !taken.has(r.key)).map((r) =>
       `<option value="${esc(r.key)}" ${r.key === selected ? "selected" : ""}>${esc(runLabel(r))}</option>`);
-    return `<option value="" ${selected ? "" : "selected"}>— pick a strategy —</option>` + opts.join("");
+    // blank placeholder, not "— pick a strategy —": the empty slot already
+    // says so with its red border and warning triangle
+    return `<option value="" ${selected ? "" : "selected"}></option>` + opts.join("");
   };
 
   const parts = slots.map((key, i) => {
